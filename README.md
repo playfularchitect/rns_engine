@@ -75,7 +75,7 @@ b = b % rns.M
 
 ## Performance
 
-On a machine with AVX2 (tested on Google Colab T4):
+On a machine with AVX2 (tested on Google Colab's CPU):
 
 | Operation | Throughput |
 |-----------|-----------|
