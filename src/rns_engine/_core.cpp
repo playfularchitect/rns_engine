@@ -12,6 +12,9 @@
 #include <pybind11/numpy.h>
 #include <stdint.h>
 #include <stdexcept>
+#ifdef _MSC_VER
+typedef Py_ssize_t ssize_t;
+#endif
 
 // ssize_t is POSIX — not available on MSVC. Use Py_ssize_t everywhere.
 #include <Python.h>
