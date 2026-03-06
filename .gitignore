@@ -1,0 +1,36 @@
+# Build artifacts
+build/
+dist/
+wheelhouse/
+*.egg-info/
+*.egg
+*.so
+*.pyd
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.Python
+.venv/
+venv/
+env/
+
+# C++
+*.o
+*.obj
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test/coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db
