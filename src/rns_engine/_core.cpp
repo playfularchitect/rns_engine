@@ -1,38 +1,27 @@
 /*
  * rns_engine/_core.cpp
- *
- * 3-rail Residue Number System exact integer arithmetic.
- * Moduli: 127 x 8191 x 65536  ->  dynamic range [0, 68,174,282,752)
- *
- * AVX2 fast path on x86-64. Scalar fallback on all other platforms.
- * Windows/MSVC + Linux/Mac/GCC/Clang compatible.
+ * 3-rail RNS exact integer arithmetic. AVX2 + scalar fallback.
+ * Works on Windows/MSVC, Linux/GCC, Mac/Clang.
  */
 
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <stdint.h>
 #include <stdexcept>
-#ifdef _MSC_VER
-typedef Py_ssize_t ssize_t;
-#endif
-
-// ssize_t is POSIX — not available on MSVC. Use Py_ssize_t everywhere.
-#include <Python.h>
 
 namespace py = pybind11;
 using arr16 = py::array_t<uint16_t>;
 using arr32 = py::array_t<uint32_t>;
 using arr64 = py::array_t<uint64_t>;
 
-static constexpr uint32_t M0    = 127;
-static constexpr uint32_t M1    = 8191;
-static constexpr uint32_t M2    = 65536;
-static constexpr uint64_t BM    = (uint64_t)M0 * M1 * M2;
-static constexpr uint32_t INV01 = 129;
-static constexpr uint32_t INV012= 24705;
+static constexpr uint32_t M0     = 127;
+static constexpr uint32_t M1     = 8191;
+static constexpr uint32_t M2     = 65536;
+static constexpr uint64_t BM     = (uint64_t)M0 * M1 * M2;
+static constexpr uint32_t INV01  = 129;
+static constexpr uint32_t INV012 = 24705;
 #define L 16
 
-// ── scalar helpers ────────────────────────────────────────────────────────
 static inline uint16_t r127s(uint32_t x) {
     x = (x & 0x7F) + (x >> 7);
     x = (x & 0x7F) + (x >> 7);
@@ -67,14 +56,14 @@ static inline uint64_t garner(uint16_t r0, uint32_t r1, uint16_t r2) {
     return base + (uint64_t)(d * (uint64_t)INV012 % 65536) * 127ULL * 8191ULL;
 }
 
-// ── scalar kernel ─────────────────────────────────────────────────────────
+// int64_t used for loop counters — works on Windows, Linux, Mac
 static void kernel_scalar(
     const uint16_t *a0, const uint32_t *a1, const uint16_t *a2,
     const uint16_t *b0, const uint32_t *b1, const uint16_t *b2,
     uint16_t *r0,       uint32_t *r1,       uint16_t *r2,
-    Py_ssize_t n, int op)
+    int64_t n, int op)
 {
-    for (Py_ssize_t i = 0; i < n; i++) {
+    for (int64_t i = 0; i < n; i++) {
         if (op == 0) {
             r0[i] = r127s(a0[i] + b0[i]);
             r1[i] = r8191s((uint64_t)a1[i] + b1[i]);
@@ -84,7 +73,7 @@ static void kernel_scalar(
             r1[i] = r8191s((uint64_t)a1[i] * b1[i]);
             r2[i] = (uint16_t)((uint32_t)a2[i] * b2[i]);
         } else if (op == 2) {
-            r0[i] = r127s(127  + a0[i] - b0[i] % 127);
+            r0[i] = r127s(127 + a0[i] - b0[i] % 127);
             r1[i] = r8191s(8191 + (uint64_t)a1[i] - b1[i] % 8191);
             r2[i] = (uint16_t)((65536 + a2[i] - b2[i] % 65536) & 0xFFFF);
         } else {
@@ -95,22 +84,17 @@ static void kernel_scalar(
     }
 }
 
-// ── AVX2 fast path ────────────────────────────────────────────────────────
-// __AVX2__ is defined by GCC/Clang with -mavx2.
-// On MSVC with /arch:AVX2, use _M_IX86_FP or check __AVX2__ directly.
-#if defined(__AVX2__) || (defined(_MSC_VER) && defined(__AVX2__))
+#if defined(__AVX2__)
 #include <immintrin.h>
 #define HAVE_AVX2 1
-
 using vec16 = __m256i;
-static inline vec16 V1(int x)             { return _mm256_set1_epi16((short)x); }
-static inline vec16 Va(vec16 a, vec16 b)  { return _mm256_add_epi16(a, b); }
-static inline vec16 Vs(vec16 a, vec16 b)  { return _mm256_sub_epi16(a, b); }
-static inline vec16 Vm(vec16 a, vec16 b)  { return _mm256_mullo_epi16(a, b); }
-static inline vec16 Vn(vec16 a, vec16 b)  { return _mm256_and_si256(a, b); }
-static inline vec16 Vh(vec16 a, int s)    { return _mm256_srli_epi16(a, s); }
-static inline vec16 Ve(vec16 a, vec16 b)  { return _mm256_cmpeq_epi16(a, b); }
-
+static inline vec16 V1(int x)            { return _mm256_set1_epi16((short)x); }
+static inline vec16 Va(vec16 a, vec16 b) { return _mm256_add_epi16(a, b); }
+static inline vec16 Vs(vec16 a, vec16 b) { return _mm256_sub_epi16(a, b); }
+static inline vec16 Vm(vec16 a, vec16 b) { return _mm256_mullo_epi16(a, b); }
+static inline vec16 Vn(vec16 a, vec16 b) { return _mm256_and_si256(a, b); }
+static inline vec16 Vh(vec16 a, int s)   { return _mm256_srli_epi16(a, s); }
+static inline vec16 Ve(vec16 a, vec16 b) { return _mm256_cmpeq_epi16(a, b); }
 static inline vec16 r127v(vec16 x) {
     vec16 t = Va(Vn(x, V1(0x7F)), Vh(x, 7));
     t = Va(Vn(t, V1(0x7F)), Vh(t, 7));
@@ -138,19 +122,15 @@ static inline vec16 mul8191v(vec16 a, vec16 b) {
     return _mm256_permute4x64_epi64(
         _mm256_packus_epi32(f(pl), f(ph)), 0b11011000);
 }
-
 static void kernel_avx2(
     const uint16_t *a0, const uint32_t *a1, const uint16_t *a2,
     const uint16_t *b0, const uint32_t *b1, const uint16_t *b2,
     uint16_t *r0,       uint32_t *r1,       uint16_t *r2,
-    Py_ssize_t n, int op)
+    int64_t n, int op)
 {
-    if (op == 3) {
-        kernel_scalar(a0,a1,a2,b0,b1,b2,r0,r1,r2,n,op);
-        return;
-    }
-    Py_ssize_t full = (n / L) * L;
-    for (Py_ssize_t base = 0; base < full; base += L) {
+    if (op == 3) { kernel_scalar(a0,a1,a2,b0,b1,b2,r0,r1,r2,n,op); return; }
+    int64_t full = (n / L) * L;
+    for (int64_t base = 0; base < full; base += L) {
         alignas(32) int16_t ta0[L],tb0[L],ta1[L],tb1[L],ta2[L],tb2[L];
         for (int l = 0; l < L; l++) {
             ta0[l]=(int16_t)a0[base+l]; tb0[l]=(int16_t)b0[base+l];
@@ -162,13 +142,9 @@ static void kernel_avx2(
         vec16 va2=_mm256_load_si256((vec16*)ta2), vb2=_mm256_load_si256((vec16*)tb2);
         vec16 vr0, vr1, vr2;
         if (op == 0) {
-            vr0 = r127v(Va(va0,vb0));
-            vr1 = r8191v(Va(va1,vb1));
-            vr2 = Va(va2,vb2);
+            vr0 = r127v(Va(va0,vb0)); vr1 = r8191v(Va(va1,vb1)); vr2 = Va(va2,vb2);
         } else if (op == 1) {
-            vr0 = r127v(Vm(va0,vb0));
-            vr1 = mul8191v(va1,vb1);
-            vr2 = Vm(va2,vb2);
+            vr0 = r127v(Vm(va0,vb0)); vr1 = mul8191v(va1,vb1);   vr2 = Vm(va2,vb2);
         } else {
             vr0 = r127v (Va(va0, r127v (Vs(V1(127),  vb0))));
             vr1 = r8191v(Va(va1, r8191v(Vs(V1(8191), vb1))));
@@ -184,21 +160,18 @@ static void kernel_avx2(
             r2[base+l]=(uint16_t)tr2[l];
         }
     }
-    kernel_scalar(a0+full,a1+full,a2+full,
-                  b0+full,b1+full,b2+full,
-                  r0+full,r1+full,r2+full,
-                  n-full, op);
+    kernel_scalar(a0+full,a1+full,a2+full,b0+full,b1+full,b2+full,
+                  r0+full,r1+full,r2+full, n-full, op);
 }
 #else
 #define HAVE_AVX2 0
 #endif
 
-// ── dispatch ──────────────────────────────────────────────────────────────
 static void kernel(
     const uint16_t *a0, const uint32_t *a1, const uint16_t *a2,
     const uint16_t *b0, const uint32_t *b1, const uint16_t *b2,
     uint16_t *r0,       uint32_t *r1,       uint16_t *r2,
-    Py_ssize_t n, int op)
+    int64_t n, int op)
 {
 #if HAVE_AVX2
     kernel_avx2(a0,a1,a2,b0,b1,b2,r0,r1,r2,n,op);
@@ -207,15 +180,14 @@ static void kernel(
 #endif
 }
 
-// ── Python API ────────────────────────────────────────────────────────────
 py::tuple py_encode(arr64 x_in) {
-    auto x  = x_in.unchecked<1>();
-    Py_ssize_t n = x_in.shape(0);
+    auto x = x_in.unchecked<1>();
+    int64_t n = (int64_t)x_in.shape(0);
     arr16 o0({n}); arr32 o1({n}); arr16 o2({n});
     auto p0 = o0.mutable_unchecked<1>();
     auto p1 = o1.mutable_unchecked<1>();
     auto p2 = o2.mutable_unchecked<1>();
-    for (Py_ssize_t i = 0; i < n; i++) {
+    for (int64_t i = 0; i < n; i++) {
         uint64_t v = x(i) % BM;
         p0(i) = (uint16_t)(v % 127);
         p1(i) = (uint32_t)(v % 8191);
@@ -225,15 +197,15 @@ py::tuple py_encode(arr64 x_in) {
 }
 
 arr64 py_decode(arr16 r0_, arr32 r1_, arr16 r2_) {
-    Py_ssize_t n = r0_.shape(0);
-    if (r1_.shape(0) != n || r2_.shape(0) != n)
+    int64_t n = (int64_t)r0_.shape(0);
+    if (r1_.shape(0) != (size_t)n || r2_.shape(0) != (size_t)n)
         throw std::invalid_argument("array length mismatch");
     arr64 out({n});
     auto r0 = r0_.unchecked<1>();
     auto r1 = r1_.unchecked<1>();
     auto r2 = r2_.unchecked<1>();
     auto o  = out.mutable_unchecked<1>();
-    for (Py_ssize_t i = 0; i < n; i++) o(i) = garner(r0(i), r1(i), r2(i));
+    for (int64_t i = 0; i < n; i++) o(i) = garner(r0(i), r1(i), r2(i));
     return out;
 }
 
@@ -241,7 +213,7 @@ py::tuple py_op(arr16 a0, arr32 a1, arr16 a2,
                 arr16 b0, arr32 b1, arr16 b2, int opcode) {
     if (opcode < 0 || opcode > 3)
         throw std::invalid_argument("opcode must be 0=add 1=mul 2=sub 3=div");
-    Py_ssize_t n = a0.shape(0);
+    int64_t n = (int64_t)a0.shape(0);
     arr16 r0({n}); arr32 r1({n}); arr16 r2({n});
     kernel(a0.data(), a1.data(), a2.data(),
            b0.data(), b1.data(), b2.data(),
@@ -252,26 +224,20 @@ py::tuple py_op(arr16 a0, arr32 a1, arr16 a2,
 
 PYBIND11_MODULE(_core, m) {
     m.doc() = "rns_engine._core: AVX2-accelerated 3-rail RNS exact integer arithmetic.";
-    m.attr("M")       = (uint64_t)BM;
-    m.attr("M0")      = (uint32_t)M0;
-    m.attr("M1")      = (uint32_t)M1;
-    m.attr("M2")      = (uint32_t)M2;
-    m.attr("HAS_AVX2")= (bool)HAVE_AVX2;
-
-    m.def("encode", &py_encode,
-          "encode(x) -> (r0, r1, r2): convert uint64 array to RNS residues.");
-    m.def("decode", &py_decode,
-          "decode(r0, r1, r2) -> uint64 array: reconstruct via Garner CRT.");
-    m.def("op", &py_op,
-          "op(r0a,r1a,r2a, r0b,r1b,r2b, opcode) -> (r0,r1,r2). "
-          "opcode: 0=add 1=mul 2=sub 3=div");
-    m.def("add",  [](arr16 a0,arr32 a1,arr16 a2, arr16 b0,arr32 b1,arr16 b2)
+    m.attr("M")        = (uint64_t)BM;
+    m.attr("M0")       = (uint32_t)M0;
+    m.attr("M1")       = (uint32_t)M1;
+    m.attr("M2")       = (uint32_t)M2;
+    m.attr("HAS_AVX2") = (bool)HAVE_AVX2;
+    m.def("encode", &py_encode, "uint64[] -> (r0,r1,r2)");
+    m.def("decode", &py_decode, "(r0,r1,r2) -> uint64[]");
+    m.def("op",     &py_op,     "opcode: 0=add 1=mul 2=sub 3=div");
+    m.def("add",  [](arr16 a0,arr32 a1,arr16 a2,arr16 b0,arr32 b1,arr16 b2)
           { return py_op(a0,a1,a2,b0,b1,b2,0); }, "Exact addition.");
-    m.def("sub",  [](arr16 a0,arr32 a1,arr16 a2, arr16 b0,arr32 b1,arr16 b2)
+    m.def("sub",  [](arr16 a0,arr32 a1,arr16 a2,arr16 b0,arr32 b1,arr16 b2)
           { return py_op(a0,a1,a2,b0,b1,b2,2); }, "Exact subtraction.");
-    m.def("mul",  [](arr16 a0,arr32 a1,arr16 a2, arr16 b0,arr32 b1,arr16 b2)
+    m.def("mul",  [](arr16 a0,arr32 a1,arr16 a2,arr16 b0,arr32 b1,arr16 b2)
           { return py_op(a0,a1,a2,b0,b1,b2,1); }, "Exact multiplication.");
-    m.def("div_", [](arr16 a0,arr32 a1,arr16 a2, arr16 b0,arr32 b1,arr16 b2)
-          { return py_op(a0,a1,a2,b0,b1,b2,3); },
-          "Exact division. b must be coprime to all moduli.");
+    m.def("div_", [](arr16 a0,arr32 a1,arr16 a2,arr16 b0,arr32 b1,arr16 b2)
+          { return py_op(a0,a1,a2,b0,b1,b2,3); }, "Exact division.");
 }
