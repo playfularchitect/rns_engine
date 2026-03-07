@@ -2,7 +2,16 @@
 
 Exact integer arithmetic for Python using a 3-rail Residue Number System (RNS).
 
-All four operations — add, subtract, multiply, divide — produce **bit-perfect results with zero floating-point error**, guaranteed by the Chinese Remainder Theorem.
+Most integer arithmetic in Python and NumPy looks exact but isn't — or is exact but slow. Here's the tradeoff you're usually forced to make:
+
+| Option | Fast | Exact |
+|---|---|---|
+| Python `int` | ❌ | ✅ arbitrary precision |
+| NumPy `int64` | ✅ | ❌ silently overflows |
+| `decimal` / `gmpy2` | ❌ | ✅ |
+| **rns_engine (AVX2)** | **✅** | **✅** |
+
+`rns_engine` breaks that tradeoff. On AVX2 hardware (Intel/AMD), it processes 16 values simultaneously in SIMD registers while guaranteeing bit-perfect results — **errors are structurally impossible**, not just unlikely. There is no rounding mode to configure, no overflow to guard against, no precision to tune. The architecture makes incorrect results unrepresentable.
 
 ```python
 pip install rns_engine
@@ -12,7 +21,7 @@ pip install rns_engine
 
 ## What it does
 
-Numbers are encoded as residues across three moduli (`127 × 8191 × 65536`), arithmetic is performed independently on each rail, and results are reconstructed exactly via Garner's CRT algorithm. There is no rounding, no approximation, no overflow within the dynamic range.
+Numbers are encoded as residues across three coprime moduli (`127 × 8191 × 65536`), arithmetic is performed independently on each rail in parallel, and results are reconstructed exactly via Garner's CRT algorithm. The Chinese Remainder Theorem guarantees a unique exact answer for every operation within the dynamic range — the same way a lock with three independent tumblers has exactly one key.
 
 **Dynamic range:** `[0, 68,174,282,752)` — about 68 billion unique integers representable exactly.
 
@@ -46,10 +55,10 @@ print(result)  # [1500 2800 4200] — exact, always
 ## Operations
 
 ```python
-rns.add(*ra, *rb)   # addition
-rns.sub(*ra, *rb)   # subtraction
-rns.mul(*ra, *rb)   # multiplication
-rns.div_(*ra, *rb)  # division (b must be coprime to all moduli)
+rns.add(*ra, *rb)       # addition
+rns.sub(*ra, *rb)       # subtraction
+rns.mul(*ra, *rb)       # multiplication
+rns.div_(*ra, *rb)      # division (b must be coprime to all moduli)
 rns.op(*ra, *rb, opcode)  # 0=add 1=mul 2=sub 3=div
 ```
 
