@@ -70,8 +70,8 @@ All operations take and return `(r0, r1, r2)` tuples of numpy arrays.
 
 | Platform | AVX2 | add/sub/mul | div |
 |---|---|---|---|
-| Linux x86-64 (Intel/AMD) | ✅ yes | ~200–420 M ops/s | ~1.6 M ops/s |
-| Windows x86-64 (Intel/AMD) | ✅ yes | ~200–420 M ops/s | ~1.6 M ops/s |
+| Linux x86-64 (Intel/AMD) | ✅ yes | ~140–420 M ops/s | ~1.6 M ops/s |
+| Windows x86-64 (Intel/AMD) | ✅ yes | ~140–420 M ops/s | ~1.6 M ops/s |
 | Apple Silicon (M1/M2/M3) | ❌ no | scalar fallback | scalar fallback |
 | Linux ARM64 | ❌ no | scalar fallback | scalar fallback |
 
