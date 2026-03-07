@@ -51,7 +51,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install cibuildwheel
-        run: pip install cibuildwheel==2.19.1
+        run: pip install cibuildwheel==2.21.3
 
       - name: Build wheels
         run: python -m cibuildwheel --output-dir wheelhouse
