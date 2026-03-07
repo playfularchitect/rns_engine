@@ -1,10 +1,10 @@
 [build-system]
 requires = ["setuptools>=64", "pybind11>=2.11"]
-build-backend = "setuptools.build_meta"
+build-backend = "setuptools.backends.legacy:build"
 
 [project]
 name = "rns_engine"
-version = "0.1.0"
+version = "0.2.0"
 description = "Exact integer arithmetic via AVX2-accelerated Residue Number System"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -27,8 +27,8 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/playfularchitect/rns_engine"
-Issues   = "https://github.com/playfularchitect/rns_engine/issues"
+Homepage = "https://github.com/YOUR_USERNAME/rns_engine"
+Issues   = "https://github.com/YOUR_USERNAME/rns_engine/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -37,17 +37,13 @@ where = ["src"]
 rns_engine = ["*.pyi"]
 
 [tool.cibuildwheel]
-# Build for CPython 3.9–3.12 only (not PyPy)
 build = "cp39-* cp310-* cp311-* cp312-*"
-# Skip 32-bit builds and musllinux (AVX2 not worth supporting there)
 skip  = "*-win32 *-manylinux_i686 *-musllinux*"
-dependency-versions = "latest"
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64"]
 
 [tool.cibuildwheel.macos]
-# x86_64 supports AVX2; arm64 (M1/M2) uses scalar fallback
 archs = ["x86_64", "arm64"]
 
 [tool.cibuildwheel.windows]

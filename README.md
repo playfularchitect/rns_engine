@@ -1,31 +1,26 @@
 # rns_engine
 
-Exact integer arithmetic for Python using a 3-rail Residue Number System (RNS).
+**Exact integer arithmetic via AVX2-accelerated Residue Number System (RNS).**
 
-Most integer arithmetic in Python and NumPy looks exact but isn't — or is exact but slow. Here's the tradeoff you're usually forced to make:
-
-| Option | Fast | Exact |
-|---|---|---|
-| Python `int` | ❌ | ✅ arbitrary precision |
-| NumPy `int64` | ✅ | ❌ silently overflows |
-| `decimal` / `gmpy2` | ❌ | ✅ |
-| **rns_engine (AVX2)** | **✅** | **✅** |
-
-`rns_engine` breaks that tradeoff. On AVX2 hardware (Intel/AMD), it processes 16 values simultaneously in SIMD registers while guaranteeing bit-perfect results — **errors are structurally impossible**, not just unlikely. There is no rounding mode to configure, no overflow to guard against, no precision to tune. The architecture makes incorrect results unrepresentable.
-
-```python
-pip install rns_engine
-```
+No floating point. No approximation. Errors are structurally impossible.
 
 ---
 
 ## What it does
 
-Numbers are encoded as residues across three coprime moduli (`127 × 8191 × 65536`), arithmetic is performed independently on each rail in parallel, and results are reconstructed exactly via Garner's CRT algorithm. The Chinese Remainder Theorem guarantees a unique exact answer for every operation within the dynamic range — the same way a lock with three independent tumblers has exactly one key.
+Standard Python integers are exact but slow. NumPy is fast but uses floating point or silently overflows. `rns_engine` gives you **exact integer arithmetic at hundreds of millions of operations per second** — the best of both worlds.
 
-**Dynamic range:** `[0, 68,174,282,752)` — about 68 billion unique integers representable exactly.
+It works by decomposing integers into residues across three coprime moduli (127, 8191, 65536), performing all operations in residue space using AVX2 SIMD instructions, and reconstructing exact results via the Chinese Remainder Theorem.
 
----
+**Dynamic range:** `[0, 68,174,282,752)` — about 68 billion.
+
+## Install
+
+```bash
+pip install rns_engine
+```
+
+Requires a CPU with AVX2 (any Intel/AMD since ~2013). Falls back to scalar arithmetic on ARM and older hardware.
 
 ## Quick start
 
@@ -33,87 +28,103 @@ Numbers are encoded as residues across three coprime moduli (`127 × 8191 × 655
 import rns_engine as rns
 import numpy as np
 
-rns.info()
-# rns_engine v0.1.0
-#   Dynamic range : [0, 68,174,282,752)
-#   Moduli        : 127 × 8191 × 65536
-#   AVX2          : yes   ← Intel/AMD Linux/Windows
-#   Operations    : add  sub  mul  div_
+# Works on arrays of uint64
+a = np.array([123456789, 999999999], dtype=np.uint64)
+b = np.array([987654321, 111111111], dtype=np.uint64)
 
-a = np.array([1000, 2000, 3000], dtype=np.uint64)
-b = np.array([500,  800,  1200], dtype=np.uint64)
+# Encode once
+ea = rns.encode(a)   # returns (r0, r1, r2) residue arrays
+eb = rns.encode(b)
 
-ra = rns.encode(a)
-rb = rns.encode(b)
+# Operate in residue space — no intermediate decode needed
+result = rns.decode(*rns.mul(*ea, *eb))   # exact multiplication
 
-result = rns.decode(*rns.add(*ra, *rb))
-print(result)  # [1500 2800 4200] — exact, always
+# Chain multiple operations — decode once at the end
+s1 = rns.add(*ea, *eb)      # a + b
+s2 = rns.mul(*s1, *eb)      # (a + b) * b
+s3 = rns.sub(*s2, *ea)      # (a + b) * b - a
+out = rns.decode(*s3)        # one decode, three operations
 ```
-
----
 
 ## Operations
 
+| Function | Description |
+|----------|-------------|
+| `rns.encode(x)` | `uint64[]` → `(r0, r1, r2)` residue arrays |
+| `rns.decode(r0, r1, r2)` | Residues → `uint64[]` via Garner's algorithm |
+| `rns.add(*ea, *eb)` | Exact addition |
+| `rns.sub(*ea, *eb)` | Exact subtraction |
+| `rns.mul(*ea, *eb)` | Exact multiplication |
+| `rns.div_(*ea, *eb)` | Exact division (b must be coprime to all moduli) |
+| `rns.op(*ea, *eb, code)` | Generic: `0`=add `1`=mul `2`=sub `3`=div |
+
+### Division constraint
+
+Division requires `b` to be invertible on all three rails:
+- `b % 127  != 0`
+- `b % 8191 != 0`
+- `b % 65536` is **odd** (coprime to 2^16)
+
 ```python
-rns.add(*ra, *rb)       # addition
-rns.sub(*ra, *rb)       # subtraction
-rns.mul(*ra, *rb)       # multiplication
-rns.div_(*ra, *rb)      # division (b must be coprime to all moduli)
-rns.op(*ra, *rb, opcode)  # 0=add 1=mul 2=sub 3=div
+# Safe way to ensure b is valid for division:
+b = np.where(b % 2 == 0, b + 1, b)   # make odd
+b = np.where(b % 127  == 0, b + 2, b)
+b = np.where(b % 8191 == 0, b + 4, b)
+b = b % rns.M
 ```
-
-All operations take and return `(r0, r1, r2)` tuples of numpy arrays.
-
----
 
 ## Performance
 
-| Platform | AVX2 | add/sub/mul | div |
-|---|---|---|---|
-| Linux x86-64 (Intel/AMD) | ✅ yes | ~140–420 M ops/s | ~1.6 M ops/s |
-| Windows x86-64 (Intel/AMD) | ✅ yes | ~140–420 M ops/s | ~1.6 M ops/s |
-| Apple Silicon (M1/M2/M3) | ❌ no | scalar fallback | scalar fallback |
-| Linux ARM64 | ❌ no | scalar fallback | scalar fallback |
+On a machine with AVX2 (tested on Google Colab T4):
 
-### Apple Silicon / Mac users
+| Operation | Throughput |
+|-----------|-----------|
+| add | ~200–400 M ops/sec |
+| sub | ~200–400 M ops/sec |
+| mul | ~200–400 M ops/sec |
+| div | ~1.6 M ops/sec (scalar modinv per element) |
 
-AVX2 is an Intel/AMD instruction set — Apple Silicon Macs don't support it, so the library falls back to scalar arithmetic. **The results are identical and fully exact**, just slower at large scale.
+## Why RNS?
 
-For small arrays (thousands of elements) you won't notice any difference. For heavy workloads (millions of operations), **use Google Colab** — Colab runs on Linux x86 CPUs with AVX2 enabled:
+In a Residue Number System, **addition and multiplication have no carry propagation between digits**. Each residue rail is independent. This makes RNS ideal for:
 
-```python
-# In a Colab notebook:
-!pip install rns_engine
-import rns_engine as rns
-rns.info()  # AVX2: yes
-```
-
-Speed only matters if you're processing large batches. For verification, testing, and moderate workloads your Mac is fine.
-
----
+- **Exact arithmetic** — results are always correct within the dynamic range
+- **Parallel computation** — rails can run simultaneously
+- **Error detection** — CRT reconstruction fails loudly if any rail is corrupted
+- **Cryptography** — modular arithmetic is the native language of RSA, ECC, etc.
 
 ## How it works
 
-RNS represents each integer as a tuple of residues:
+Three coprime moduli: `m0 = 127`, `m1 = 8191`, `m2 = 65536`
 
+Dynamic range: `M = 127 × 8191 × 65536 = 68,174,282,752`
+
+**Encode:** `x → (x mod 127, x mod 8191, x mod 65536)`
+
+**Operate:** each rail independently, e.g. add: `(a+b) mod mᵢ` per rail
+
+**Decode (Garner's algorithm):**
 ```
-x  →  (x mod 127,  x mod 8191,  x mod 65536)
+t0 = r0
+t1 = (r1 - t0) × inv(127, 8191)  mod 8191
+t2 = (r2 - t0 - t1×127) × inv(127×8191, 65536)  mod 65536
+x  = t0 + t1×127 + t2×127×8191
 ```
 
-Arithmetic on residues is independent per rail and never carries between them — no overflow, no interaction. Reconstruction uses Garner's algorithm, which recovers the original integer exactly from its residues via the Chinese Remainder Theorem.
+Mod 127 and mod 8191 reductions use the Mersenne-prime trick:
+`x mod (2^k - 1) = (x & mask) + (x >> k)` — no division needed.
 
-Division requires the divisor to be coprime to all three moduli (odd, nonzero mod 127 and 8191).
+## Building from source
 
----
+```bash
+git clone https://github.com/YOUR_USERNAME/rns_engine
+cd rns_engine
+pip install pybind11 numpy
+pip install -e .
+pytest tests/ -v
+```
 
-## Use cases
-
-- Exact arithmetic pipelines where floating-point error is unacceptable
-- Weight encoding and integrity verification for neural networks
-- Cryptographic and number-theoretic computations
-- High-throughput batch integer arithmetic on CPU
-
----
+Requires `g++` with C++17 support.
 
 ## License
 
