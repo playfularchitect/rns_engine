@@ -4,12 +4,12 @@ on:
   push:
     branches: [main]
     tags:
-      - "v*"          # trigger full wheel build + PyPI publish on version tags
+      - "v*"
   pull_request:
     branches: [main]
 
 jobs:
-  # ── 1. Run tests on the current platform ────────────────────────────────
+  # ── 1. Run tests ──────────────────────────────────────────────────────────
   test:
     name: Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -34,7 +34,7 @@ jobs:
       - name: Run tests
         run: pytest tests/ -v
 
-  # ── 2. Build wheels for all platforms ───────────────────────────────────
+  # ── 2. Build wheels ───────────────────────────────────────────────────────
   build_wheels:
     name: Wheels (${{ matrix.os }})
     needs: test
@@ -51,7 +51,15 @@ jobs:
           python-version: "3.11"
 
       - name: Install cibuildwheel
-        run: pip install cibuildwheel==2.21.3 virtualenv
+        run: pip install cibuildwheel==2.21.3
+
+      - name: Pre-cache virtualenv (Mac rate-limit workaround)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p ~/Library/Caches/cibuildwheel
+          curl -L --retry 10 --retry-delay 15 --retry-all-errors \
+            "https://github.com/pypa/get-virtualenv/blob/20.26.6/public/virtualenv.pyz?raw=true" \
+            -o ~/Library/Caches/cibuildwheel/virtualenv-20.26.6.pyz
 
       - name: Build wheels
         run: python -m cibuildwheel --output-dir wheelhouse
@@ -61,11 +69,12 @@ jobs:
           name: wheels-${{ matrix.os }}
           path: wheelhouse/*.whl
 
-  # ── 3. Build source distribution ────────────────────────────────────────
+  # ── 3. Build source distribution ─────────────────────────────────────────
   build_sdist:
     name: Source distribution
     needs: test
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -84,19 +93,18 @@ jobs:
           name: sdist
           path: dist/*.tar.gz
 
-  # ── 4. Publish to PyPI on version tags ──────────────────────────────────
+  # ── 4. Publish to PyPI on version tags ───────────────────────────────────
   publish:
     name: Publish to PyPI
     needs: [build_wheels, build_sdist]
     runs-on: ubuntu-latest
-    # Only publish on version tags (v0.1.0, v1.0.0, etc.)
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     environment:
       name: pypi
       url: https://pypi.org/project/rns_engine/
 
     permissions:
-      id-token: write   # needed for trusted publishing (no API key required)
+      id-token: write
 
     steps:
       - name: Download all artifacts
