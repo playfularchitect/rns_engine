@@ -159,4 +159,4 @@ Requires `g++` with C++17 support.
 
 ## License
 
-MIT
+Apache 2.0
