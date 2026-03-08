@@ -148,7 +148,7 @@ Mod 127 and mod 8191 reductions use the Mersenne-prime trick:
 ## Building from source
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/rns_engine
+git clone https://github.com/playfularchitect/rns_engine
 cd rns_engine
 pip install pybind11 numpy
 pip install -e .
