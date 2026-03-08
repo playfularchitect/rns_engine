@@ -50,9 +50,10 @@ from ._core import (
     M, M0, M1, M2, HAS_AVX2,
 )
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __all__ = ["encode", "decode", "op", "add", "sub", "mul", "div_", "fma",
-           "M", "M0", "M1", "M2", "HAS_AVX2"]
+           "M", "M0", "M1", "M2", "HAS_AVX2",
+           "EncodedArray", "SessionCache", "Session"]
 
 
 def info():
@@ -63,3 +64,5 @@ def info():
     print(f"  AVX2          : {'yes' if HAS_AVX2 else 'no (scalar fallback)'}")
     print(f"  Operations    : add  sub  mul  div_  fma")
     print(f"  Rail dtype    : uint16 (all three rails)")
+
+from .engine import EncodedArray, SessionCache, Session
