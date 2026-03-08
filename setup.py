@@ -1,48 +1,53 @@
 """
-setup.py — builds the rns_engine C++ extension.
+setup.py — build configuration for the rns_engine C++ extension.
 
-Detects AVX2 support and enables it when available.
-Falls back to scalar on non-x86 or older hardware.
+Notes:
+- The default build is portable and does not assume AVX2.
+- AVX2 can be enabled explicitly on supported x86_64 machines by setting:
+    RNS_ENGINE_ENABLE_AVX2=1
+- NumPy headers are included explicitly because the extension uses NumPy arrays.
 """
 
-import sys
+import os
 import platform
 from setuptools import setup, Extension
 import pybind11
+import numpy as np
+
+
+def env_flag(name: str) -> bool:
+    value = os.environ.get(name, "").strip().lower()
+    return value in {"1", "true", "yes", "on"}
 
 
 def get_compile_args():
-    """Return compiler flags appropriate for the current platform."""
     system = platform.system()
-    machine = platform.machine()
+    machine = platform.machine().lower()
 
-    common = ["-std=c++17", "-O3", "-DNDEBUG", "-Wno-unused-function"]
+    if system == "Windows":
+        args = ["/std:c++17", "/O2", "/DNDEBUG"]
+        if machine in ("amd64", "x86_64") and env_flag("RNS_ENGINE_ENABLE_AVX2"):
+            args.append("/arch:AVX2")
+        return args
 
-    if system in ("Linux", "Darwin") and machine in ("x86_64", "AMD64"):
-        # Enable AVX2 on x86-64 Linux/Mac
-        return common + ["-mavx2", "-march=native", "-funroll-loops"]
+    args = ["-std=c++17", "-O3", "-DNDEBUG", "-Wno-unused-function"]
 
-    elif system == "Windows":
-        # MSVC flags
-        return ["/std:c++17", "/O2", "/DNDEBUG", "/arch:AVX2"]
+    # Keep published builds portable by default.
+    # Opt into AVX2 explicitly for local/source builds on supported CPUs.
+    if machine in ("x86_64", "amd64") and env_flag("RNS_ENGINE_ENABLE_AVX2"):
+        args += ["-mavx2", "-funroll-loops"]
 
-    else:
-        # ARM, RISC-V, etc. — scalar fallback, still fast
-        return common
-
-    return common
+    return args
 
 
 def get_link_args():
-    if platform.system() == "Windows":
-        return []
     return []
 
 
 ext = Extension(
     "rns_engine._core",
     sources=["src/rns_engine/_core.cpp"],
-    include_dirs=[pybind11.get_include()],
+    include_dirs=[pybind11.get_include(), np.get_include()],
     extra_compile_args=get_compile_args(),
     extra_link_args=get_link_args(),
     language="c++",
