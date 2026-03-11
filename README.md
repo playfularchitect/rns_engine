@@ -12,7 +12,7 @@ No floating point. No approximation. Exact results modulo the engine's dynamic r
 
 ## What it does
 
-Standard Python integers are exact but slow. NumPy arrays are fast, but fixed-width integer arithmetic can overflow and float-based pipelines drift. `rns_engine` gives you **exact modular arithmetic within a fixed dynamic range** by decomposing values across four coprime rails:
+Standard Python integers are exact but slow. NumPy arrays are fast, but fixed-width integer arithmetic can overflow and float-based pipelines drift. `rns_engine` gives you ** extremely fast and exact modular arithmetic within a fixed dynamic range** by decomposing values across four coprime rails:
 
 - `127`
 - `8191`
