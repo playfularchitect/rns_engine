@@ -28,3 +28,18 @@ include-package-data = true
 [tool.setuptools.packages.find]
 where = ["src"]
 include = ["rns_engine", "rns_engine.*"]
+
+[tool.cibuildwheel]
+build = ["cp310-*", "cp311-*", "cp312-*"]
+skip = ["pp*", "*-musllinux*"]
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]
+environment = { MACOSX_DEPLOYMENT_TARGET = "11.0" }
+before-all = "brew install libomp || true"
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
