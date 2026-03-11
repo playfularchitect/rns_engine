@@ -1,0 +1,122 @@
+RNS CORE TEST — RC1 SNAPSHOT
+================================
+
+Status
+------
+This build is the first release-candidate style snapshot with:
+
+- raw uint64 input/output scalar-broadcast APIs
+- OpenMP variants
+- auto-dispatch variants
+- reproducible per-op harnesses
+- correctness checks across all implemented families
+
+Implemented families
+--------------------
+add:
+- add_u64_io
+- add_u64_io_omp
+- add_u64_auto
+
+sub:
+- sub_u64_io
+- sub_u64_io_omp
+- sub_u64_auto
+
+mul:
+- mul_u64_io
+- mul_u64_io_omp
+- mul_u64_auto
+
+fma:
+- fma_u64_io
+- fma_u64_io_omp
+- fma_u64_auto
+
+affine repeat:
+- affine_repeat_u64_io
+- affine_repeat_u64_io_omp
+- affine_repeat_u64_auto
+
+Thread controls
+---------------
+- omp_max_threads()
+- omp_set_num_threads(n)
+- omp_num_procs()
+
+Chosen auto-dispatch thresholds
+-------------------------------
+These were chosen from the dedicated per-op harnesses, not from the noisy unified pack.
+
+- add_u64_auto: use OMP when N >= 16384
+- sub_u64_auto: use OMP when N >= 16384
+- mul_u64_auto: use OMP when N >= 32768
+- fma_u64_auto: use OMP when N >= 65536
+- affine_repeat_u64_auto: use OMP when N >= 4096
+
+Usage cheat sheet
+-----------------
+Use these as the default public calls:
+
+    rns4.add_u64_auto(x, addend)
+    rns4.sub_u64_auto(x, subtrahend)
+    rns4.mul_u64_auto(x, multiplier)
+    rns4.fma_u64_auto(x, multiplier, addend)
+    rns4.affine_repeat_u64_auto(x, multiplier, addend, iterations)
+
+For forcing 2-thread OpenMP on this VM:
+
+    rns4.omp_set_num_threads(2)
+
+Important note on repeat throughput
+-----------------------------------
+affine_repeat_* throughput is reported as effective logical ops/s because the
+repeated affine sequence is algebraically collapsed before application.
+That is real useful speed, but it is not literal physical scalar-step throughput.
+
+Trusted dedicated-harness takeaways
+-----------------------------------
+add:
+- auto is in the right place after the 16384 cutoff
+- 64k+ clearly benefits from OMP on this VM
+
+sub:
+- auto is in the right place after the 16384 cutoff
+- 64k+ clearly benefits from OMP on this VM
+
+mul:
+- auto is in the right place after the 32768 cutoff
+- 64k+ clearly benefits from OMP on this VM
+
+fma:
+- fused single-thread is best below the 65536 cutoff
+- OMP wins clearly at larger sizes
+- auto is intended to stay on fused below 65536
+
+affine repeat:
+- OMP becomes worthwhile very early
+- current auto cutoff is 4096
+
+What to trust
+-------------
+Trust:
+- dedicated per-op harnesses
+- correctness checks
+- stable hashes
+- threshold recheck scripts
+
+Use caution with:
+- unified mixed benchmark packs
+- back-to-back timing inside one process without isolation
+- single-shot latency checks for tiny arrays
+
+Next engineering move
+---------------------
+Do not patch more math kernels right now.
+
+The next sane step is one of:
+1. package cleanup / release prep
+2. a tiny high-level Python wrapper that defaults to the auto APIs
+3. a benchmark trust-pack folder collecting the canonical scripts
+
+This snapshot is good enough to freeze as RC1.

@@ -1,90 +1,63 @@
-"""
-rns_engine — Exact integer arithmetic via Residue Number System (RNS).
-
-v0.3.0
-------
-- All rail arrays are uint16.
-- Includes fused multiply-add: fma(a, b, c) = a*b + c in one core call.
-- Adds high-level session/cache utilities via EncodedArray, SessionCache, Session.
-
-Dynamic range: [0, 68,174,282,752) = 127 × 8191 × 65536
-
-Notes
------
-- Values outside [0, M) are reduced mod M during encode.
-- Division requires the divisor to be invertible on every rail:
-    b % 127  != 0
-    b % 8191 != 0
-    b is odd
-- HAS_AVX2 indicates whether this extension was compiled with AVX2 enabled.
-  It is a build-time property, not runtime CPU detection.
-
-Quick start
------------
->>> import rns_engine as rns
->>> import numpy as np
->>>
->>> a = np.array([123456789, 999999999], dtype=np.uint64)
->>> b = np.array([987654321, 111111111], dtype=np.uint64)
->>> c = np.array([7, 7], dtype=np.uint64)
->>>
->>> ea = rns.encode(a)
->>> eb = rns.encode(b)
->>> ec = rns.encode(c)
->>>
->>> out1 = rns.decode(*rns.mul(*ea, *eb))
->>> out2 = rns.decode(*rns.fma(*ea, *eb, *ec))
->>>
->>> s = rns.Session()
->>> out3 = s.one_shot_affine(a, multiplier=1_000_003, addend=7)
-"""
-
 from ._core import (
     HAS_AVX2,
     M,
     M0,
     M1,
     M2,
-    add,
-    decode,
-    div_,
+    M3,
     encode,
-    fma,
-    mul,
+    decode,
     op,
+    add,
     sub,
+    mul,
+    div_,
+    fma,
+    affine_repeat,
+    mul_u64,
+    fma_u64,
+    affine_repeat_u64,
+    add_u64_io,
+    add_u64_io_omp,
+    add_u64_auto,
+    sub_u64_io,
+    sub_u64_io_omp,
+    sub_u64_auto,
+    mul_u64_io,
+    mul_u64_io_omp,
+    mul_u64_auto,
+    fma_u64_io,
+    fma_u64_io_omp,
+    fma_u64_auto,
+    affine_repeat_u64_io,
+    affine_repeat_u64_io_omp,
+    affine_repeat_u64_auto,
+    omp_max_threads,
+    omp_set_num_threads,
+    omp_num_procs,
 )
-from .engine import EncodedArray, Session, SessionCache
 
-__version__ = "0.3.0"
+__version__ = "0.4.0rc1"
 
 __all__ = [
-    "encode",
-    "decode",
-    "op",
-    "add",
-    "sub",
-    "mul",
-    "div_",
-    "fma",
-    "M",
-    "M0",
-    "M1",
-    "M2",
     "HAS_AVX2",
-    "EncodedArray",
-    "SessionCache",
-    "Session",
+    "M", "M0", "M1", "M2", "M3",
+    "encode", "decode", "op",
+    "add", "sub", "mul", "div_", "fma",
+    "affine_repeat",
+    "mul_u64", "fma_u64", "affine_repeat_u64",
+    "add_u64_io", "add_u64_io_omp", "add_u64_auto",
+    "sub_u64_io", "sub_u64_io_omp", "sub_u64_auto",
+    "mul_u64_io", "mul_u64_io_omp", "mul_u64_auto",
+    "fma_u64_io", "fma_u64_io_omp", "fma_u64_auto",
+    "affine_repeat_u64_io", "affine_repeat_u64_io_omp", "affine_repeat_u64_auto",
+    "omp_max_threads", "omp_set_num_threads", "omp_num_procs",
     "info",
 ]
 
-
-def info() -> None:
-    """Print a summary of the engine configuration."""
+def info():
     print(f"rns_engine v{__version__}")
     print(f"  Dynamic range : [0, {M:,})")
-    print(f"  Moduli        : {M0} x {M1} x {M2}")
+    print(f"  Moduli        : {M0} x {M1} x {M2} x {M3}")
     print(f"  AVX2          : {'yes' if HAS_AVX2 else 'no'}")
-    print("  Operations    : add  sub  mul  div_  fma")
-    print("  Rail dtype    : uint16 (all three rails)")
-    print("  High-level    : EncodedArray  SessionCache  Session")
+    print("  Core APIs     : add/sub/mul/fma + raw/omp/auto scalar-broadcast family")

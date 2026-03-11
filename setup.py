@@ -1,48 +1,17 @@
-"""
-setup.py — build configuration for the rns_engine C++ extension.
-
-Notes:
-- The default build is portable and does not assume AVX2.
-- AVX2 can be enabled explicitly on supported x86_64 machines by setting:
-    RNS_ENGINE_ENABLE_AVX2=1
-- NumPy headers are included explicitly because the extension uses NumPy arrays.
-"""
-
-import os
 import platform
-from setuptools import setup, Extension
+from setuptools import setup, Extension, find_packages
 import pybind11
 import numpy as np
 
-
-def env_flag(name: str) -> bool:
-    value = os.environ.get(name, "").strip().lower()
-    return value in {"1", "true", "yes", "on"}
-
-
 def get_compile_args():
-    system = platform.system()
+    args = ["-std=c++17", "-O3", "-DNDEBUG", "-fopenmp"]
     machine = platform.machine().lower()
-
-    if system == "Windows":
-        args = ["/std:c++17", "/O2", "/DNDEBUG"]
-        if machine in ("amd64", "x86_64") and env_flag("RNS_ENGINE_ENABLE_AVX2"):
-            args.append("/arch:AVX2")
-        return args
-
-    args = ["-std=c++17", "-O3", "-DNDEBUG", "-Wno-unused-function"]
-
-    # Keep published builds portable by default.
-    # Opt into AVX2 explicitly for local/source builds on supported CPUs.
-    if machine in ("x86_64", "amd64") and env_flag("RNS_ENGINE_ENABLE_AVX2"):
-        args += ["-mavx2", "-funroll-loops"]
-
+    if machine in ("x86_64", "amd64"):
+        args += ["-mavx2", "-funroll-loops", "-DFORCE_AVX2"]
     return args
 
-
 def get_link_args():
-    return []
-
+    return ["-fopenmp"]
 
 ext = Extension(
     "rns_engine._core",
@@ -53,4 +22,12 @@ ext = Extension(
     language="c++",
 )
 
-setup(ext_modules=[ext])
+setup(
+    name="rns_engine",
+    version="0.4.0rc1",
+    package_dir={"": "src"},
+    packages=find_packages("src"),
+    ext_modules=[ext],
+    include_package_data=True,
+    zip_safe=False,
+)
