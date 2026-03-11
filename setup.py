@@ -3,15 +3,41 @@ from setuptools import setup, Extension, find_packages
 import pybind11
 import numpy as np
 
+
 def get_compile_args():
-    args = ["-std=c++17", "-O3", "-DNDEBUG", "-fopenmp"]
+    system = platform.system()
     machine = platform.machine().lower()
+
+    if system == "Windows":
+        args = ["/std:c++17", "/O2", "/DNDEBUG"]
+        if machine in ("x86_64", "amd64"):
+            args += ["/D_FORCE_AVX2"]
+        return args
+
+    args = ["-std=c++17", "-O3", "-DNDEBUG"]
+
+    # OpenMP on Unix-like platforms
+    if system in ("Linux", "Darwin"):
+        args += ["-fopenmp"]
+
+    # AVX2 on x86_64 only
     if machine in ("x86_64", "amd64"):
         args += ["-mavx2", "-funroll-loops", "-DFORCE_AVX2"]
+
     return args
 
+
 def get_link_args():
-    return ["-fopenmp"]
+    system = platform.system()
+
+    if system == "Windows":
+        return []
+
+    if system in ("Linux", "Darwin"):
+        return ["-fopenmp"]
+
+    return []
+
 
 ext = Extension(
     "rns_engine._core",
