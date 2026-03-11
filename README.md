@@ -1,4 +1,5 @@
 # rns_engine
+# This is licensed under AGPLv3. If you use it in a network service, you must make your modified source available to users.
 
 **Exact 4-rail integer arithmetic via a Residue Number System (RNS), with AVX2 and optional OpenMP acceleration.**
 
