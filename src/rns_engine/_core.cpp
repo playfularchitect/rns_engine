@@ -1,5 +1,5 @@
 /*
- * rns_engine/_core.cpp  --  v0.4.4-dev
+ * rns_engine/_core.cpp  --  v0.4.0rc1
  *
  * 4-rail RNS exact integer arithmetic.
  * Best-known speed baseline + native affine_repeat().
@@ -16,7 +16,13 @@
 #include <stdexcept>
 #include <string>
 #include <cstring>
+#ifdef _OPENMP
 #include <omp.h>
+#else
+static inline int omp_get_max_threads() { return 1; }
+static inline void omp_set_num_threads(int) {}
+static inline int omp_get_num_procs() { return 1; }
+#endif
 
 namespace py = pybind11;
 
@@ -2242,7 +2248,7 @@ arr64 py_sub_u64_auto(const arr64& x_in, uint64_t subtrahend) {
 
 PYBIND11_MODULE(_core, m) {
     m.doc() =
-        "_core v0.4.4-dev\n"
+        "_core v0.4.0rc1\n"
         "4-rail exact integer arithmetic.\n"
         "Best-known speed baseline + native affine_repeat.\n"
         "Moduli: 127 x 8191 x 65536 x 524287.\n";
