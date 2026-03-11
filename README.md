@@ -1,7 +1,7 @@
 # rns_engine
 ** This is licensed under AGPLv3. If you use it in a network service, you must make your modified source available to users. 
-** Commercial Licensing
-** If you need to use this software in a proprietary or closed-source product, commercial licenses are available. This allows you to bypass the AGPL requirements. For inquiries, please contact: ewesley541@gmail.com
+ Commercial Licensing
+ If you need to use this software in a proprietary or closed-source product, commercial licenses are available. This allows you to bypass the AGPL requirements. For inquiries, please contact: ewesley541@gmail.com**
 
 
 **Exact 4-rail integer arithmetic via a Residue Number System (RNS), with AVX2 and optional OpenMP acceleration.**
