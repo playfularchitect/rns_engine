@@ -10,7 +10,7 @@ import pytest
 import rns_engine as rns
 
 
-M = rns.M
+M = int(rns.M)
 
 
 # ── helpers ───────────────────────────────────────────────────────────────
@@ -25,10 +25,27 @@ def make(n: int, seed: int = 42, odd_b: bool = False):
 
 
 def make_invertible_divisor(n: int, seed: int = 123) -> np.ndarray:
-    _, b = make(n, seed=seed, odd_b=True)
-    b = np.where(b % 127 == 0, b + 1, b)
-    b = np.where(b % 8191 == 0, b + 2, b)
-    b = b % M
+    rng = np.random.default_rng(seed)
+
+    b = rng.integers(0, M // 2, size=n, dtype=np.uint64) * 2 + 1
+    b = b % np.uint64(M)
+
+    bad = (
+        (b % np.uint64(127) == 0)
+        | (b % np.uint64(8191) == 0)
+        | (b % np.uint64(524287) == 0)
+        | ((b & np.uint64(1)) == 0)
+    )
+
+    while np.any(bad):
+        b = np.where(bad, (b + np.uint64(2)) % np.uint64(M), b)
+        bad = (
+            (b % np.uint64(127) == 0)
+            | (b % np.uint64(8191) == 0)
+            | (b % np.uint64(524287) == 0)
+            | ((b & np.uint64(1)) == 0)
+        )
+
     return b.astype(np.uint64)
 
 
@@ -87,12 +104,14 @@ def division_oracle(a_np: np.ndarray, b_np: np.ndarray) -> np.ndarray:
         r0 = (ai % 127) * modinv(bi % 127, 127) % 127
         r1 = (ai % 8191) * modinv(bi % 8191, 8191) % 8191
         r2 = (ai % 65536) * modinv(bi % 65536, 65536) % 65536
+        r3 = (ai % 524287) * modinv(bi % 524287, 524287) % 524287
 
         out[i] = int(
             rns.decode(
                 np.array([r0], dtype=np.uint16),
                 np.array([r1], dtype=np.uint16),
                 np.array([r2], dtype=np.uint16),
+                np.array([r3], dtype=np.uint32),
             )[0]
         )
 
@@ -101,10 +120,11 @@ def division_oracle(a_np: np.ndarray, b_np: np.ndarray) -> np.ndarray:
 
 # ── basic sanity ──────────────────────────────────────────────────────────
 def test_constants():
-    assert rns.M == 127 * 8191 * 65536
+    assert rns.M == 127 * 8191 * 65536 * 524287
     assert rns.M0 == 127
     assert rns.M1 == 8191
     assert rns.M2 == 65536
+    assert rns.M3 == 524287
 
 
 def test_info_runs():
@@ -113,7 +133,7 @@ def test_info_runs():
 
 # ── encode / decode ───────────────────────────────────────────────────────
 def test_roundtrip_small():
-    vals = np.array([0, 1, 126, 127, 8190, 8191, 65535, M - 1], dtype=np.uint64)
+    vals = np.array([0, 1, 126, 127, 8190, 8191, 65535, 524286, M - 1], dtype=np.uint64)
     assert np.array_equal(vals, rns.decode(*rns.encode(vals)))
 
 
@@ -130,7 +150,7 @@ def test_encode_reduces_mod_M():
 
 def test_encode_accepts_noncontiguous_input():
     base = np.arange(40, dtype=np.uint64)
-    vals = base[::2]  # non-contiguous
+    vals = base[::2]
     got = rns.decode(*rns.encode(vals))
     assert np.array_equal(got, vals % M)
 
@@ -138,7 +158,7 @@ def test_encode_accepts_noncontiguous_input():
 def test_decode_accepts_noncontiguous_rails():
     vals = np.arange(30, dtype=np.uint64)
     e = rns.encode(vals)
-    sliced = tuple(rail[::2] for rail in e)  # non-contiguous views
+    sliced = tuple(rail[::2] for rail in e)
     got = rns.decode(*sliced)
     assert np.array_equal(got, vals[::2] % M)
 
@@ -259,6 +279,13 @@ def test_div_rejects_noninvertible_mod_8191():
 def test_div_rejects_even_divisor_mod_65536():
     a = np.array([5], dtype=np.uint64)
     b = np.array([2], dtype=np.uint64)
+    with pytest.raises(ValueError):
+        rns.div_(*rns.encode(a), *rns.encode(b))
+
+
+def test_div_rejects_noninvertible_mod_524287():
+    a = np.array([5], dtype=np.uint64)
+    b = np.array([524287], dtype=np.uint64)
     with pytest.raises(ValueError):
         rns.div_(*rns.encode(a), *rns.encode(b))
 

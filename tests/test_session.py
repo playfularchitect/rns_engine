@@ -148,6 +148,7 @@ def test_encoded_array_is_read_only():
     assert enc.r0.flags.writeable is False
     assert enc.r1.flags.writeable is False
     assert enc.r2.flags.writeable is False
+    assert enc.r3.flags.writeable is False
 
     with pytest.raises(ValueError):
         enc.r0[0] = 99
