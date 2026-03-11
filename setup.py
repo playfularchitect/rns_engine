@@ -11,16 +11,16 @@ def get_compile_args():
     if system == "Windows":
         args = ["/std:c++17", "/O2", "/DNDEBUG"]
         if machine in ("x86_64", "amd64"):
-            args += ["/D_FORCE_AVX2"]
+            args += ["/arch:AVX2", "/D_FORCE_AVX2"]
         return args
 
     args = ["-std=c++17", "-O3", "-DNDEBUG"]
 
-    # OpenMP on Unix-like platforms
-    if system in ("Linux", "Darwin"):
+    # Linux: enable OpenMP
+    if system == "Linux":
         args += ["-fopenmp"]
 
-    # AVX2 on x86_64 only
+    # x86_64 SIMD
     if machine in ("x86_64", "amd64"):
         args += ["-mavx2", "-funroll-loops", "-DFORCE_AVX2"]
 
@@ -30,10 +30,7 @@ def get_compile_args():
 def get_link_args():
     system = platform.system()
 
-    if system == "Windows":
-        return []
-
-    if system in ("Linux", "Darwin"):
+    if system == "Linux":
         return ["-fopenmp"]
 
     return []
