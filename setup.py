@@ -5,15 +5,6 @@ import pybind11
 import numpy as np
 
 
-def get_macos_libomp():
-    for prefix in ["/opt/homebrew", "/usr/local"]:
-        inc = f"{prefix}/opt/libomp/include"
-        lib = f"{prefix}/opt/libomp/lib"
-        if os.path.isdir(inc) and os.path.isdir(lib):
-            return inc, lib
-    return None, None
-
-
 def get_compile_args():
     system = platform.system()
     archflags = os.environ.get("ARCHFLAGS", "")
@@ -33,10 +24,8 @@ def get_compile_args():
     if system == "Linux":
         args += ["-fopenmp"]
 
-    if system == "Darwin":
-        omp_inc, _ = get_macos_libomp()
-        if omp_inc:
-            args += ["-Xpreprocessor", "-fopenmp", f"-I{omp_inc}"]
+    # macOS: no OpenMP — avoids delocate arch mismatch on arm64 wheels
+    # The cpp has #ifdef _OPENMP guards, scalar fallbacks work correctly
 
     if machine in ("x86_64", "amd64"):
         args += ["-mavx2", "-funroll-loops", "-DFORCE_AVX2"]
@@ -49,11 +38,6 @@ def get_link_args():
 
     if system == "Linux":
         return ["-fopenmp"]
-
-    if system == "Darwin":
-        _, omp_lib = get_macos_libomp()
-        if omp_lib:
-            return [f"-L{omp_lib}", "-lomp"]
 
     return []
 
