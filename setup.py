@@ -6,7 +6,6 @@ import numpy as np
 
 
 def get_macos_libomp():
-    """Find libomp installed via Homebrew on macOS (Intel or Apple Silicon)."""
     for prefix in ["/opt/homebrew", "/usr/local"]:
         inc = f"{prefix}/opt/libomp/include"
         lib = f"{prefix}/opt/libomp/lib"
@@ -17,8 +16,6 @@ def get_macos_libomp():
 
 def get_compile_args():
     system = platform.system()
-    # cibuildwheel sets ARCHFLAGS for cross-compilation on macOS,
-    # so we read the target arch from there if available
     archflags = os.environ.get("ARCHFLAGS", "")
     if "arm64" in archflags:
         machine = "arm64"
