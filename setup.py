@@ -53,7 +53,7 @@ ext = Extension(
 
 setup(
     name="rns_engine",
-    version="0.4.0rc1",
+    version="0.4.0",
     package_dir={"": "src"},
     packages=find_packages("src"),
     ext_modules=[ext],
