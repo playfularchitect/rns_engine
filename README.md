@@ -1,7 +1,5 @@
 # rns_engine
-** This is licensed under AGPLv3. If you use it in a network service, you must make your modified source available to users. 
- Commercial Licensing
- If you need to use this software in a proprietary or closed-source product, commercial licenses are available. This allows you to bypass the AGPL requirements. For inquiries, please contact: ewesley541@gmail.com**
+
 
 
 **Extremely fast and Exact integer arithmetic on a 2 core cpu**
@@ -312,6 +310,10 @@ rns.HAS_AVX2
 ---
 
 ## License
+** This is licensed under AGPLv3. If you use it in a network service, you must make your modified source available to users. 
+ Commercial Licensing
+ If you need to use this software in a proprietary or closed-source product, commercial licenses are available. This allows you to bypass the AGPL requirements. For inquiries, please contact: ewesley541@gmail.com**
+
 
 **AGPL-3.0-only**  
 Copyright 2026 Evan Wesley
