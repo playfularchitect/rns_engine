@@ -4,7 +4,7 @@
  If you need to use this software in a proprietary or closed-source product, commercial licenses are available. This allows you to bypass the AGPL requirements. For inquiries, please contact: ewesley541@gmail.com**
 
 
-**Exact 4-rail integer arithmetic via a Residue Number System (RNS), with AVX2 and optional OpenMP acceleration.**
+**Extremely fast and Exact integer arithmetic on a 2 core cpu**
 
 No floating point. No approximation. Exact results modulo the engine's dynamic range.
 
