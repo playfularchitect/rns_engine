@@ -226,7 +226,6 @@ Workload: `affine_repeat_u64_io(x, 1_000_003, 7, iterations=1000)`
 ### Verification status
 
 * correctness sanity checks passed
-* built wheel installed and executed successfully
 * full test suite passed: **49 / 49**
 
 ---
