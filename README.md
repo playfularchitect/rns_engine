@@ -6,6 +6,8 @@
 
 No floating point. No approximation. Exact results modulo the engine's dynamic range.
 
+
+Link to recent benchmark on Colab: https://colab.research.google.com/drive/18RIQSLf4Vf5xUnwEmDwYNPJDLSM_Stqa?usp=sharing
 ---
 
 ## What it does
