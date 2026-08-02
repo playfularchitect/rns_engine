@@ -228,7 +228,7 @@ Workload: `affine_repeat_u64_io(x, 1_000_003, 7, iterations=1000)`
 ### Verification status
 
 * correctness sanity checks passed
-* full test suite passed: **49 / 49**
+* full test suite passed: **50 / 50**
 
 ---
 
@@ -298,8 +298,9 @@ rns.HAS_AVX2
 
 ## Current release
 
-### v0.4.0
+### v0.4.1
 
+* Maintenance release: repaired packaging metadata, cross-platform wheel builds, and Python 3.10–3.13 CI; arithmetic core unchanged
 * 4-rail engine (`127 × 8191 × 65536 × 524287`)
 * AVX2-accelerated encoded kernels
 * fused `fma(...)`
