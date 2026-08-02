@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61", "wheel", "pybind11", "numpy"]
+requires = ["setuptools>=77", "wheel", "pybind11>=2.13", "numpy>=1.23"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -11,11 +11,16 @@ requires-python = ">=3.10"
 authors = [
   { name = "Evan Wesley" }
 ]
-license = {text = "AGPL-3.0-only"}
-dependencies = ["numpy"]
+license = "AGPL-3.0-only"
+license-files = ["LICENSE"]
+dependencies = ["numpy>=1.23"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
   "Programming Language :: C++",
   "Operating System :: OS Independent",
 ]
@@ -29,13 +34,14 @@ where = ["src"]
 include = ["rns_engine", "rns_engine.*"]
 
 [tool.cibuildwheel]
-build = ["cp310-*", "cp311-*", "cp312-*"]
+build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*"]
 skip = ["pp*", "*-musllinux*"]
+test-requires = ["pytest"]
+test-command = "python -m pytest {project}/tests -v"
 
 [tool.cibuildwheel.macos]
 archs = ["x86_64", "arm64"]
 environment = {MACOSX_DEPLOYMENT_TARGET = "11.0"}
-before-all = "brew install libomp || true"
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64"]
