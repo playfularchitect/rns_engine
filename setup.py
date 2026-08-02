@@ -39,19 +39,27 @@ def get_link_args():
     return []
 
 
-ext = Extension(
-    "rns_engine._core",
-    sources=["src/rns_engine/_core.cpp"],
-    include_dirs=[pybind11.get_include(), np.get_include()],
-    extra_compile_args=get_compile_args(),
-    extra_link_args=get_link_args(),
-    language="c++",
+def native_extension(name, source):
+    return Extension(
+        name,
+        sources=[source],
+        include_dirs=[pybind11.get_include(), np.get_include()],
+        extra_compile_args=get_compile_args(),
+        extra_link_args=get_link_args(),
+        language="c++",
+    )
+
+
+ext = native_extension("rns_engine._core", "src/rns_engine/_core.cpp")
+weighted_ext = native_extension(
+    "rns_engine._weighted",
+    "src/rns_engine/_weighted.cpp",
 )
 
 # Project metadata and package discovery live in pyproject.toml. Keeping them
 # out of setup.py prevents the two build entry points from drifting apart.
 setup(
-    ext_modules=[ext],
+    ext_modules=[ext, weighted_ext],
     include_package_data=True,
     zip_safe=False,
 )
