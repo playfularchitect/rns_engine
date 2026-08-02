@@ -1,3 +1,5 @@
+from importlib.metadata import PackageNotFoundError, version as _distribution_version
+
 from ._core import (
     HAS_AVX2,
     M,
@@ -38,7 +40,12 @@ from ._core import (
 )
 from .engine import EncodedArray, Session, SessionCache
 
-__version__ = "0.4.0rc1"
+try:
+    __version__ = _distribution_version("rns_engine")
+except PackageNotFoundError:
+    # This only occurs when importing directly from an unpacked source tree
+    # rather than from an installed wheel/editable build.
+    __version__ = "0+unknown"
 
 __all__ = [
     "HAS_AVX2",
