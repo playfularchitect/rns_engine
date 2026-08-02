@@ -48,6 +48,7 @@ from .signed import (
     SignedRangeCertificate,
     SignedSession,
     certify_signed_bound,
+    certify_signed_dot_bound,
     decode_signed,
     encode_signed,
 )
@@ -75,7 +76,7 @@ __all__ = [
     "affine_repeat_u64_io", "affine_repeat_u64_io_omp", "affine_repeat_u64_auto",
     "omp_max_threads", "omp_set_num_threads", "omp_num_procs",
     "EncodedArray", "SessionCache", "Session", "SignedSession",
-    "SignedRangeCertificate", "certify_signed_bound",
+    "SignedRangeCertificate", "certify_signed_bound", "certify_signed_dot_bound",
     "info",
 ]
 
