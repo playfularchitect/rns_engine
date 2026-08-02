@@ -272,10 +272,11 @@ pytest tests/ -v
 
 Requirements:
 
-* Python 3.10+
+* Python 3.10–3.13
 * C++17 compiler
-* NumPy
-* pybind11
+* An internet-accessible Python package index containing the build dependencies
+
+`pip` installs NumPy and pybind11 automatically from `pyproject.toml`. In an offline or restricted environment, those packages must already be available on the configured package index or installed locally before building.
 
 ---
 
@@ -297,7 +298,7 @@ rns.HAS_AVX2
 
 ## Current release
 
-### v0.4.0rc1
+### v0.4.0
 
 * 4-rail engine (`127 × 8191 × 65536 × 524287`)
 * AVX2-accelerated encoded kernels
