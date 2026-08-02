@@ -9,6 +9,7 @@ import numpy as np
 from ._core import M
 from ._core import decode as _decode
 from ._core import encode as _encode
+from .engine import EncodedArray, Session
 
 HALF_M = int(M) // 2
 SIGNED_MIN = -HALF_M
@@ -146,6 +147,16 @@ def certify_signed_bound(max_abs_bound: int) -> SignedRangeCertificate:
     return SignedRangeCertificate(max_abs_bound=max_abs_bound)
 
 
+class SignedSession(Session):
+    """Session API whose external values use centered signed RNS semantics."""
+
+    def encode_signed(self, x: Any) -> EncodedArray:
+        return EncodedArray(*encode_signed(x))
+
+    def decode_signed(self, x: EncodedArray) -> np.ndarray:
+        return decode_signed(*x.rails())
+
+
 __all__ = [
     "HALF_M",
     "SIGNED_MIN",
@@ -153,6 +164,7 @@ __all__ = [
     "UNIQUE_SIGNED_MIN",
     "UNIQUE_SIGNED_MAX",
     "SignedRangeCertificate",
+    "SignedSession",
     "certify_signed_bound",
     "encode_signed",
     "decode_signed",
