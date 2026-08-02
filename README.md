@@ -86,18 +86,101 @@ hot = s.hot_loop_affine(x, multiplier=1_000_003, addend=7, iterations=1000)
 
 ---
 
+## Centered signed arithmetic and range certificates
+
+The native core computes exact residues modulo `M`. Version 0.5 adds a canonical signed view over:
+
+```text
+[-M/2, M/2 - 1]
+=
+[-17,871,445,090,598,912, 17,871,445,090,598,911]
+```
+
+```python
+import numpy as np
+import rns_engine as rns
+
+values = np.array([-5, 0, 7], dtype=np.int64)
+rails = rns.encode_signed(values)
+round_trip = rns.decode_signed(*rails)
+
+assert np.array_equal(round_trip, values)
+```
+
+`encode_signed(...)` rejects values outside the centered interval instead of silently wrapping them modulo `M`.
+
+A centered decoding is a canonical interpretation of a residue. It is **not by itself proof that an unknown mathematical result did not wrap**. Unique signed reconstruction requires an independent strict magnitude bound:
+
+```text
+|result| < M/2
+```
+
+Use a range certificate before claiming that a residue is the unique signed integer result:
+
+```python
+certificate = rns.certify_signed_bound(max_abs_bound=1_000_000)
+certificate.require_unique()
+
+print(certificate.headroom)
+print(certificate.minimum_required_modulus)
+```
+
+For a signed dot product or one GEMM output entry, the engine can build the worst-case receipt directly:
+
+```python
+certificate = rns.certify_signed_dot_bound(
+    inner_dimension=5120,
+    left_abs_bound=127,
+    right_abs_bound=127,
+)
+
+assert certificate.max_abs_bound == 82_580_480
+assert certificate.unique
+certificate.require_unique()
+```
+
+This uses the exact conservative law:
+
+```text
+output bound
+=
+inner_dimension × left bound × right bound + addend bound
+```
+
+`SignedSession` exposes the existing residue arithmetic with signed external values:
+
+```python
+s = rns.SignedSession()
+a = s.encode_signed([-5, 7])
+b = s.encode_signed([3, -10])
+out = s.decode_signed(s.add(a, b))
+```
+
+---
+
 ## Core API
 
 ### Encoded rail API
 
 * `rns.encode(x)` → `(r0, r1, r2, r3)`
 * `rns.decode(r0, r1, r2, r3)` → `uint64[]`
+* `rns.encode_signed(x)` → strict centered signed encoding
+* `rns.decode_signed(r0, r1, r2, r3)` → canonical `int64[]`
 * `rns.add(*ea, *eb)`
 * `rns.sub(*ea, *eb)`
 * `rns.mul(*ea, *eb)`
 * `rns.div_(*ea, *eb)`
 * `rns.fma(*ea, *eb, *ec)`
 * `rns.op(*ea, *eb, code)` where `0=add 1=mul 2=sub 3=div`
+
+### Range-certificate API
+
+* `rns.certify_signed_bound(max_abs_bound)`
+* `rns.certify_signed_dot_bound(inner_dimension, left_abs_bound, right_abs_bound, addend_abs_bound=0)`
+* `SignedRangeCertificate.unique`
+* `SignedRangeCertificate.headroom`
+* `SignedRangeCertificate.minimum_required_modulus`
+* `SignedRangeCertificate.require_unique()`
 
 ### Scalar-broadcast encoded API
 
@@ -136,6 +219,7 @@ Auto-dispatch variants:
 ### High-level API
 
 * `rns.Session`
+* `rns.SignedSession`
 * `rns.SessionCache`
 * `rns.EncodedArray`
 
@@ -185,7 +269,9 @@ def make_invertible_divisor(b):
 ## Data model
 
 * input arrays to `encode(...)` are treated as `uint64`
-* values outside `[0, M)` are reduced mod `M` during encode
+* values outside `[0, M)` are reduced mod `M` during unsigned encode
+* `encode_signed(...)` accepts only integers in `[-M/2, M/2 - 1]` and refuses silent wrapping
+* `decode_signed(...)` returns the canonical centered `int64` view
 * rails are returned as:
   * `r0`: `uint16`
   * `r1`: `uint16`
@@ -228,7 +314,8 @@ Workload: `affine_repeat_u64_io(x, 1_000_003, 7, iterations=1000)`
 ### Verification status
 
 * correctness sanity checks passed
-* full test suite passed: **50 / 50**
+* the full suite is exercised on Linux, macOS, and Windows across Python 3.10–3.13
+* built wheels are installed and tested before release
 
 ---
 
@@ -287,6 +374,9 @@ import rns_engine as rns
 rns.info()
 
 rns.M
+rns.HALF_M
+rns.SIGNED_MIN
+rns.SIGNED_MAX
 rns.M0
 rns.M1
 rns.M2
@@ -298,9 +388,13 @@ rns.HAS_AVX2
 
 ## Current release
 
-### v0.4.1
+### v0.5.0
 
-* Maintenance release: repaired packaging metadata, cross-platform wheel builds, and Python 3.10–3.13 CI; arithmetic core unchanged
+* canonical centered signed encoding and decoding
+* strict signed input validation with no silent modular wrapping
+* signed uniqueness certificates using the law `|result| < M/2`
+* exact dot-product and GEMM output-bound receipts
+* `SignedSession` high-level API
 * 4-rail engine (`127 × 8191 × 65536 × 524287`)
 * AVX2-accelerated encoded kernels
 * fused `fma(...)`
