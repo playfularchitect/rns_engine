@@ -52,6 +52,11 @@ from .signed import (
     decode_signed,
     encode_signed,
 )
+from .weighted import (
+    WeightedInt32Result,
+    accumulate_weighted_int32,
+    certify_weighted_sum_bound,
+)
 
 try:
     __version__ = _distribution_version("rns_engine")
@@ -77,6 +82,7 @@ __all__ = [
     "omp_max_threads", "omp_set_num_threads", "omp_num_procs",
     "EncodedArray", "SessionCache", "Session", "SignedSession",
     "SignedRangeCertificate", "certify_signed_bound", "certify_signed_dot_bound",
+    "WeightedInt32Result", "accumulate_weighted_int32", "certify_weighted_sum_bound",
     "info",
 ]
 
@@ -89,3 +95,4 @@ def info():
     print(f"  Moduli        : {M0} x {M1} x {M2} x {M3}")
     print(f"  AVX2          : {'yes' if HAS_AVX2 else 'no'}")
     print("  Core APIs     : add/sub/mul/fma + raw/omp/auto scalar-broadcast family")
+    print("  Bridge APIs   : weighted signed INT32 accumulation with range receipts")
