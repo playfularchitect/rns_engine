@@ -39,6 +39,18 @@ from ._core import (
     omp_num_procs,
 )
 from .engine import EncodedArray, Session, SessionCache
+from .signed import (
+    HALF_M,
+    SIGNED_MAX,
+    SIGNED_MIN,
+    UNIQUE_SIGNED_MAX,
+    UNIQUE_SIGNED_MIN,
+    SignedRangeCertificate,
+    SignedSession,
+    certify_signed_bound,
+    decode_signed,
+    encode_signed,
+)
 
 try:
     __version__ = _distribution_version("rns_engine")
@@ -50,7 +62,9 @@ except PackageNotFoundError:
 __all__ = [
     "HAS_AVX2",
     "M", "M0", "M1", "M2", "M3",
-    "encode", "decode", "op",
+    "HALF_M", "SIGNED_MIN", "SIGNED_MAX",
+    "UNIQUE_SIGNED_MIN", "UNIQUE_SIGNED_MAX",
+    "encode", "decode", "encode_signed", "decode_signed", "op",
     "add", "sub", "mul", "div_", "fma",
     "affine_repeat",
     "mul_u64", "fma_u64", "affine_repeat_u64",
@@ -60,13 +74,17 @@ __all__ = [
     "fma_u64_io", "fma_u64_io_omp", "fma_u64_auto",
     "affine_repeat_u64_io", "affine_repeat_u64_io_omp", "affine_repeat_u64_auto",
     "omp_max_threads", "omp_set_num_threads", "omp_num_procs",
-    "EncodedArray", "SessionCache", "Session",
+    "EncodedArray", "SessionCache", "Session", "SignedSession",
+    "SignedRangeCertificate", "certify_signed_bound",
     "info",
 ]
+
 
 def info():
     print(f"rns_engine v{__version__}")
     print(f"  Dynamic range : [0, {M:,})")
+    print(f"  Signed view   : [{SIGNED_MIN:,}, {SIGNED_MAX:,}]")
+    print(f"  Unique bound  : |x| < {HALF_M:,}")
     print(f"  Moduli        : {M0} x {M1} x {M2} x {M3}")
     print(f"  AVX2          : {'yes' if HAS_AVX2 else 'no'}")
     print("  Core APIs     : add/sub/mul/fma + raw/omp/auto scalar-broadcast family")
