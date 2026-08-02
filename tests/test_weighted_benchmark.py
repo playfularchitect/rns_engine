@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -20,8 +21,16 @@ def _load_benchmark_module():
     )
     if spec is None or spec.loader is None:
         raise RuntimeError("could not load weighted INT32 benchmark module")
+
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    # Dataclasses with postponed annotations resolve their defining module
+    # through sys.modules while the class decorator executes.
+    sys.modules[spec.name] = module
+    try:
+        spec.loader.exec_module(module)
+    except Exception:
+        sys.modules.pop(spec.name, None)
+        raise
     return module
 
 
