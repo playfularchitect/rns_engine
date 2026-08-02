@@ -93,3 +93,46 @@ def test_signed_bound_certificate_validates_the_bound():
 
     with pytest.raises(TypeError, match="must be an integer"):
         rns.certify_signed_bound(1.5)
+
+
+def test_warpfrac_int8_dot_bound_is_uniquely_signed():
+    certificate = rns.certify_signed_dot_bound(
+        inner_dimension=5120,
+        left_abs_bound=127,
+        right_abs_bound=127,
+    )
+
+    assert certificate.max_abs_bound == 82_580_480
+    assert certificate.unique is True
+    assert certificate.headroom == rns.UNIQUE_SIGNED_MAX - 82_580_480
+    assert certificate.require_unique() is certificate
+
+
+def test_dot_bound_accounts_for_an_existing_addend():
+    certificate = rns.certify_signed_dot_bound(3, 5, 7, addend_abs_bound=11)
+
+    assert certificate.max_abs_bound == 116
+    assert certificate.minimum_required_modulus == 233
+
+
+def test_dot_bound_exposes_modular_only_outputs():
+    certificate = rns.certify_signed_dot_bound(rns.HALF_M, 1, 1)
+
+    assert certificate.max_abs_bound == rns.HALF_M
+    assert certificate.unique is False
+    with pytest.raises(OverflowError, match="modular-only"):
+        certificate.require_unique()
+
+
+def test_dot_bound_validates_each_input():
+    with pytest.raises(ValueError, match="inner_dimension"):
+        rns.certify_signed_dot_bound(-1, 1, 1)
+
+    with pytest.raises(TypeError, match="left_abs_bound"):
+        rns.certify_signed_dot_bound(1, 1.5, 1)
+
+    with pytest.raises(ValueError, match="right_abs_bound"):
+        rns.certify_signed_dot_bound(1, 1, -1)
+
+    with pytest.raises(TypeError, match="addend_abs_bound"):
+        rns.certify_signed_dot_bound(1, 1, 1, addend_abs_bound="7")
