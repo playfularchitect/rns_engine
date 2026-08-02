@@ -25,6 +25,9 @@ classifiers = [
   "Operating System :: OS Independent",
 ]
 
+[project.optional-dependencies]
+test = ["pytest", "numpy==2.2.6"]
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 include-package-data = true
@@ -37,7 +40,7 @@ include = ["rns_engine", "rns_engine.*"]
 build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*"]
 skip = ["pp*", "*-musllinux*"]
 dependency-versions = "latest"
-test-requires = ["pytest"]
+test-extras = ["test"]
 test-command = "python -m pytest {project}/tests -v"
 
 [tool.cibuildwheel.macos]
