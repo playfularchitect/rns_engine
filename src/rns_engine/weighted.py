@@ -10,6 +10,7 @@ from ._core import M
 from ._core import add as _add
 from ._core import decode as _decode
 from ._core import mul_u64 as _mul_u64
+from ._weighted import weighted_int32 as _weighted_int32
 from .engine import EncodedArray
 from .signed import SignedRangeCertificate, certify_signed_bound, decode_signed, encode_signed
 
@@ -57,15 +58,7 @@ def certify_weighted_sum_bound(
     term_abs_bounds: Sequence[int] | Iterable[int],
     addend_abs_bound: int = 0,
 ) -> SignedRangeCertificate:
-    """Certify ``sum(weight[t] * term[t]) + addend`` from magnitude bounds.
-
-    The conservative exact bound is::
-
-        sum(abs(weight[t]) * term_abs_bound[t]) + addend_abs_bound
-
-    Weights are unrestricted Python integers. The certificate is unique only
-    when the resulting bound is strictly less than ``M/2``.
-    """
+    """Certify ``sum(weight[t] * term[t]) + addend`` from magnitude bounds."""
 
     exact_weights = _integer_tuple(weights, name="weights")
     exact_bounds = _bound_tuple(term_abs_bounds, name="term_abs_bounds")
@@ -105,38 +98,18 @@ class WeightedInt32Result:
         return int(np.prod(self.output_shape, dtype=np.int64)) if self.output_shape else 1
 
     def decode_modular(self) -> np.ndarray:
-        """Return the canonical unsigned residue in ``[0, M)``."""
-
         return _decode(*self.encoded.rails()).reshape(self.output_shape)
 
     def decode_signed(self, *, require_unique: bool = True) -> np.ndarray:
-        """Return the centered result, optionally requiring uniqueness proof."""
-
         if require_unique:
             self.certificate.require_unique()
         return decode_signed(*self.encoded.rails()).reshape(self.output_shape)
 
 
-def accumulate_weighted_int32(
+def _validate_weighted_inputs(
     partials: Any,
     weights: Sequence[int] | Iterable[int],
-    *,
-    require_unique: bool = False,
-) -> WeightedInt32Result:
-    """Combine signed INT32 partial outputs through native RNS kernels.
-
-    ``partials`` has shape ``(terms, *output_shape)``. Each term is encoded by
-    the native four-rail encoder, multiplied by its exact positional weight
-    modulo ``M`` through the native scalar-broadcast kernel, and accumulated by
-    the native rail-add kernel. Python orchestrates the terms; the arithmetic on
-    every output element remains in the compiled RNS body.
-
-    The returned range receipt uses the actual maximum absolute INT32 value in
-    every term and the full Python integer weights, not their reduced residues.
-    Therefore ``certificate.require_unique()`` is a valid no-wrap gate for the
-    represented weighted sum.
-    """
-
+) -> tuple[np.ndarray, tuple[int, ...], tuple[int, ...], int, np.ndarray]:
     raw = np.asarray(partials)
     if raw.ndim < 1:
         raise ValueError("partials must have shape (terms, *output_shape)")
@@ -155,6 +128,20 @@ def accumulate_weighted_int32(
     output_shape = tuple(int(dimension) for dimension in contiguous.shape[1:])
     output_size = int(np.prod(output_shape, dtype=np.int64)) if output_shape else 1
     flat = contiguous.reshape(term_count, output_size)
+    execution_weights = np.fromiter(
+        (weight % int(M) for weight in exact_weights),
+        dtype=np.uint64,
+        count=term_count,
+    )
+    return flat, exact_weights, output_shape, output_size, execution_weights
+
+
+def _accumulate_weighted_int32_staged(
+    flat: np.ndarray,
+    exact_weights: tuple[int, ...],
+    output_size: int,
+) -> tuple[tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray], tuple[int, ...]]:
+    """Pre-fusion reference body retained for correctness and A/B benchmarks."""
 
     term_abs_bounds: list[int] = []
     for term in flat:
@@ -164,14 +151,8 @@ def accumulate_weighted_int32(
         widened = term.astype(np.int64, copy=False)
         term_abs_bounds.append(int(np.max(np.abs(widened))))
 
-    bounds = tuple(term_abs_bounds)
-    certificate = certify_weighted_sum_bound(exact_weights, bounds)
-    if require_unique:
-        certificate.require_unique()
-
     accumulator = encode_signed(np.zeros(output_size, dtype=np.int64))
     modulus = int(M)
-
     for term, weight in zip(flat, exact_weights):
         if weight == 0 or output_size == 0:
             continue
@@ -179,8 +160,36 @@ def accumulate_weighted_int32(
         scaled = _mul_u64(*encoded, weight % modulus)
         accumulator = _add(*accumulator, *scaled)
 
+    return accumulator, tuple(term_abs_bounds)
+
+
+def accumulate_weighted_int32(
+    partials: Any,
+    weights: Sequence[int] | Iterable[int],
+    *,
+    require_unique: bool = False,
+) -> WeightedInt32Result:
+    """Fuse signed INT32 weighting, rail accumulation, and bound collection.
+
+    Python validates shape and preserves the original arbitrary-precision
+    weights for the proof receipt. The compiled kernel reads each INT32 term,
+    computes its actual maximum magnitude, reduces the execution weight modulo
+    ``M``, and updates all four rails without materializing encoded/scaled
+    intermediate arrays.
+    """
+
+    flat, exact_weights, output_shape, _, execution_weights = _validate_weighted_inputs(
+        partials,
+        weights,
+    )
+    r0, r1, r2, r3, native_bounds = _weighted_int32(flat, execution_weights)
+    bounds = tuple(int(value) for value in native_bounds)
+    certificate = certify_weighted_sum_bound(exact_weights, bounds)
+    if require_unique:
+        certificate.require_unique()
+
     return WeightedInt32Result(
-        encoded=EncodedArray(*accumulator),
+        encoded=EncodedArray(r0, r1, r2, r3),
         certificate=certificate,
         output_shape=output_shape,
         weights=exact_weights,
