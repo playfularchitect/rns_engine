@@ -18,6 +18,16 @@ UNIQUE_SIGNED_MIN = -HALF_M + 1
 UNIQUE_SIGNED_MAX = HALF_M - 1
 
 
+def _require_nonnegative_integer(value: Any, *, name: str) -> int:
+    try:
+        integer = index(value)
+    except TypeError as exc:
+        raise TypeError(f"{name} must be an integer") from exc
+    if integer < 0:
+        raise ValueError(f"{name} must be >= 0")
+    return integer
+
+
 def _as_signed_int64_array(x: Any) -> np.ndarray:
     raw = np.asarray(x)
     if raw.ndim != 1:
@@ -100,12 +110,10 @@ class SignedRangeCertificate:
     max_abs_bound: int
 
     def __post_init__(self) -> None:
-        try:
-            bound = index(self.max_abs_bound)
-        except TypeError as exc:
-            raise TypeError("max_abs_bound must be an integer") from exc
-        if bound < 0:
-            raise ValueError("max_abs_bound must be >= 0")
+        bound = _require_nonnegative_integer(
+            self.max_abs_bound,
+            name="max_abs_bound",
+        )
         object.__setattr__(self, "max_abs_bound", bound)
 
     @property
@@ -132,7 +140,7 @@ class SignedRangeCertificate:
 
         return 2 * self.max_abs_bound + 1
 
-    def require_unique(self) -> "SignedRangeCertificate":
+    def require_unique(self) -> SignedRangeCertificate:
         if not self.unique:
             raise OverflowError(
                 "signed result is modular-only: the certified absolute bound "
@@ -145,6 +153,37 @@ def certify_signed_bound(max_abs_bound: int) -> SignedRangeCertificate:
     """Return a strict uniqueness certificate for a known absolute bound."""
 
     return SignedRangeCertificate(max_abs_bound=max_abs_bound)
+
+
+def certify_signed_dot_bound(
+    inner_dimension: int,
+    left_abs_bound: int,
+    right_abs_bound: int,
+    addend_abs_bound: int = 0,
+) -> SignedRangeCertificate:
+    """Certify the worst-case magnitude of an exact signed dot product.
+
+    For ``sum(a[k] * b[k]) + c`` with ``inner_dimension`` terms, this uses the
+    conservative exact bound::
+
+        inner_dimension * left_abs_bound * right_abs_bound + addend_abs_bound
+
+    This is also the per-output bound for a GEMM whose entries satisfy the same
+    magnitude limits. The returned certificate is unique only when that bound
+    is strictly less than ``M/2``.
+    """
+
+    k = _require_nonnegative_integer(inner_dimension, name="inner_dimension")
+    left = _require_nonnegative_integer(left_abs_bound, name="left_abs_bound")
+    right = _require_nonnegative_integer(
+        right_abs_bound,
+        name="right_abs_bound",
+    )
+    addend = _require_nonnegative_integer(
+        addend_abs_bound,
+        name="addend_abs_bound",
+    )
+    return certify_signed_bound(k * left * right + addend)
 
 
 class SignedSession(Session):
@@ -166,6 +205,7 @@ __all__ = [
     "SignedRangeCertificate",
     "SignedSession",
     "certify_signed_bound",
+    "certify_signed_dot_bound",
     "encode_signed",
     "decode_signed",
 ]
