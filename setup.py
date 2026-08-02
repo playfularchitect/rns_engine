@@ -1,8 +1,9 @@
 import os
 import platform
-from setuptools import setup, Extension, find_packages
-import pybind11
+
 import numpy as np
+import pybind11
+from setuptools import Extension, setup
 
 
 def get_compile_args():
@@ -24,9 +25,8 @@ def get_compile_args():
     if system == "Linux":
         args += ["-fopenmp"]
 
-    # macOS: no OpenMP — avoids delocate arch mismatch on arm64 wheels
-    # The cpp has #ifdef _OPENMP guards, scalar fallbacks work correctly
-
+    # macOS intentionally uses the scalar fallback instead of OpenMP so the
+    # arm64 and x86_64 wheels do not gain an external libomp dependency.
     if machine in ("x86_64", "amd64"):
         args += ["-mavx2", "-funroll-loops", "-DFORCE_AVX2"]
 
@@ -34,11 +34,8 @@ def get_compile_args():
 
 
 def get_link_args():
-    system = platform.system()
-
-    if system == "Linux":
+    if platform.system() == "Linux":
         return ["-fopenmp"]
-
     return []
 
 
@@ -51,11 +48,9 @@ ext = Extension(
     language="c++",
 )
 
+# Project metadata and package discovery live in pyproject.toml. Keeping them
+# out of setup.py prevents the two build entry points from drifting apart.
 setup(
-    name="rns_engine",
-    version="0.4.0",
-    package_dir={"": "src"},
-    packages=find_packages("src"),
     ext_modules=[ext],
     include_package_data=True,
     zip_safe=False,
