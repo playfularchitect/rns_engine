@@ -36,6 +36,7 @@ include = ["rns_engine", "rns_engine.*"]
 [tool.cibuildwheel]
 build = ["cp310-*", "cp311-*", "cp312-*", "cp313-*"]
 skip = ["pp*", "*-musllinux*"]
+dependency-versions = "latest"
 test-requires = ["pytest"]
 test-command = "python -m pytest {project}/tests -v"
 
