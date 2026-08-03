@@ -68,6 +68,13 @@ from .coefficients import (
     GroupedCoefficientCapacityPlan,
     plan_grouped_coefficient_capacity,
 )
+from .rail_planning import (
+    MersenneRailCandidate,
+    MersenneRailSearchResult,
+    MersenneRailSetPlan,
+    search_mersenne_rail_sets,
+    search_mersenne_rails_for_capacity,
+)
 
 try:
     __version__ = _distribution_version("rns_engine")
@@ -98,6 +105,8 @@ __all__ = [
     "GroupedCoefficientCapacityPlan",
     "plan_signed_capacity", "plan_weighted_sum_capacity",
     "plan_digit_plane_gemm_capacity", "plan_grouped_coefficient_capacity",
+    "MersenneRailCandidate", "MersenneRailSetPlan", "MersenneRailSearchResult",
+    "search_mersenne_rail_sets", "search_mersenne_rails_for_capacity",
     "info",
 ]
 
@@ -111,4 +120,4 @@ def info():
     print(f"  AVX2          : {'yes' if HAS_AVX2 else 'no'}")
     print("  Core APIs     : add/sub/mul/fma + raw/omp/auto scalar-broadcast family")
     print("  Bridge APIs   : weighted signed INT32 accumulation with range receipts")
-    print("  Planning APIs : local coefficient safety + global digit-plane RNS capacity")
+    print("  Planning APIs : local/global capacity + exact Mersenne rail-set search")
