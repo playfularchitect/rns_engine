@@ -128,6 +128,46 @@ jobs:
       - name: Check sdist metadata
         run: python -m twine check dist/*
 
+      - name: Verify source distribution contents
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import tarfile
+
+          archives = list(Path("dist").glob("*.tar.gz"))
+          if len(archives) != 1:
+              raise SystemExit(f"expected one source archive, found {archives}")
+
+          required = {
+              "CAPACITY_PLANNING.md",
+              "PRE_CUDA_READINESS.md",
+              "CUDA_PARALLEL_LANES.md",
+              "benchmarks/weighted_int32_baseline.py",
+              "colab/T4_EXACT_GEMM_BRINGUP.ipynb",
+              "tests/test_pre_cuda.py",
+          }
+          with tarfile.open(archives[0], "r:gz") as archive:
+              members = set()
+              for member in archive.getmembers():
+                  parts = Path(member.name).parts
+                  if len(parts) > 1:
+                      members.add("/".join(parts[1:]))
+
+          missing = sorted(required - members)
+          if missing:
+              raise SystemExit(f"source archive is missing required assets: {missing}")
+          print("source archive contains every readiness asset")
+          PY
+
+      - name: Install source distribution and run readiness gate
+        shell: bash
+        run: |
+          python -m pip install --force-reinstall --no-deps dist/*.tar.gz
+          rns-pre-cuda --report /tmp/readiness.json --fixture /tmp/t4_fixture.json
+          test -s /tmp/readiness.json
+          test -s /tmp/t4_fixture.json
+
       - uses: actions/upload-artifact@v4
         with:
           name: sdist
