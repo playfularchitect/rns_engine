@@ -57,6 +57,17 @@ from .weighted import (
     accumulate_weighted_int32,
     certify_weighted_sum_bound,
 )
+from .capacity import (
+    DigitPlaneGemmCapacityPlan,
+    SignedCapacityPlan,
+    plan_digit_plane_gemm_capacity,
+    plan_signed_capacity,
+    plan_weighted_sum_capacity,
+)
+from .coefficients import (
+    GroupedCoefficientCapacityPlan,
+    plan_grouped_coefficient_capacity,
+)
 
 try:
     __version__ = _distribution_version("rns_engine")
@@ -83,6 +94,10 @@ __all__ = [
     "EncodedArray", "SessionCache", "Session", "SignedSession",
     "SignedRangeCertificate", "certify_signed_bound", "certify_signed_dot_bound",
     "WeightedInt32Result", "accumulate_weighted_int32", "certify_weighted_sum_bound",
+    "SignedCapacityPlan", "DigitPlaneGemmCapacityPlan",
+    "GroupedCoefficientCapacityPlan",
+    "plan_signed_capacity", "plan_weighted_sum_capacity",
+    "plan_digit_plane_gemm_capacity", "plan_grouped_coefficient_capacity",
     "info",
 ]
 
@@ -96,3 +111,4 @@ def info():
     print(f"  AVX2          : {'yes' if HAS_AVX2 else 'no'}")
     print("  Core APIs     : add/sub/mul/fma + raw/omp/auto scalar-broadcast family")
     print("  Bridge APIs   : weighted signed INT32 accumulation with range receipts")
+    print("  Planning APIs : local coefficient safety + global digit-plane RNS capacity")
