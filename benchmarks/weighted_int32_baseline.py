@@ -1,17 +1,13 @@
 #!/usr/bin/env python3
-"""Reproducible baseline for weighted signed-INT32 RNS accumulation.
+"""Reproducible fused-vs-staged benchmark for weighted signed-INT32 RNS accumulation.
 
-This benchmark measures the current evidence-first implementation:
+The public path uses one fused native call for signed INT32 reading, per-term
+magnitude collection, positional weighting, and four-rail accumulation. The
+retained staged reference uses the pre-fusion encode -> scale -> add sequence.
+Both paths are checked against each other and against exact sampled witnesses.
 
-    Python term scheduling
-      -> native signed encoder
-      -> native scalar rail multiply
-      -> native rail add
-      -> optional native CRT decode
-
-It does not benchmark CUDA or claim that the current body is optimal. Its job is
-to reveal when Python dispatch and repeated native-kernel launches become large
-enough to justify a fused C++ implementation.
+This benchmark is CPU-only. It does not measure CUDA or Tensor Cores and makes
+no universal hardware-performance claim.
 """
 
 from __future__ import annotations
@@ -29,6 +25,10 @@ from typing import Iterable
 import numpy as np
 
 import rns_engine as rns
+from rns_engine.weighted import (
+    _accumulate_weighted_int32_staged,
+    _validate_weighted_inputs,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,14 +41,19 @@ class CaseResult:
     max_abs_bound: int
     unique_signed_result: bool
     signed_headroom: int
-    estimated_native_calls: int
-    accumulation_median_seconds: float
-    accumulation_min_seconds: float
+    fused_native_calls: int
+    staged_native_calls: int
+    fused_median_seconds: float
+    fused_min_seconds: float
+    staged_median_seconds: float
+    staged_min_seconds: float
+    fused_speedup_over_staged: float
     decode_median_seconds: float
-    partial_values_per_second: float
-    output_values_per_second: float
+    fused_partial_values_per_second: float
+    staged_partial_values_per_second: float
+    fused_output_values_per_second: float
     numpy_int64_control_median_seconds: float | None
-    rns_over_numpy_ratio: float | None
+    fused_over_numpy_ratio: float | None
 
 
 def _positive_int(value: str) -> int:
@@ -100,6 +105,38 @@ def _median_timing(function, repeats: int) -> tuple[float, float, object]:
     return statistics.median(elapsed), min(elapsed), last_result
 
 
+def _run_staged(partials: np.ndarray, weights: tuple[int, ...]):
+    flat, exact_weights, output_shape, output_size, _ = _validate_weighted_inputs(
+        partials,
+        weights,
+    )
+    rails, bounds = _accumulate_weighted_int32_staged(
+        flat,
+        exact_weights,
+        output_size,
+    )
+    certificate = rns.certify_weighted_sum_bound(exact_weights, bounds)
+    return rns.WeightedInt32Result(
+        encoded=rns.EncodedArray(*rails),
+        certificate=certificate,
+        output_shape=output_shape,
+        weights=exact_weights,
+        term_abs_bounds=bounds,
+    )
+
+
+def _verify_receipts_match(
+    fused: rns.WeightedInt32Result,
+    staged: rns.WeightedInt32Result,
+) -> None:
+    assert fused.output_shape == staged.output_shape
+    assert fused.weights == staged.weights
+    assert fused.term_abs_bounds == staged.term_abs_bounds
+    assert fused.certificate == staged.certificate
+    for fused_rail, staged_rail in zip(fused.encoded.rails(), staged.encoded.rails()):
+        np.testing.assert_array_equal(fused_rail, staged_rail)
+
+
 def _verify_sample(
     partials: np.ndarray,
     weights: tuple[int, ...],
@@ -117,6 +154,7 @@ def _verify_sample(
         dtype=np.int64,
     )
     modular = receipt.decode_modular()
+    signed = receipt.decode_signed() if receipt.certificate.unique else None
 
     for index_value in indices:
         output_index = int(index_value)
@@ -131,14 +169,11 @@ def _verify_sample(
                 "modular witness mismatch at output "
                 f"{output_index}: {actual_modular} != {expected_modular}"
             )
-
-        if receipt.certificate.unique:
-            actual_signed = int(receipt.decode_signed()[output_index])
-            if actual_signed != exact:
-                raise AssertionError(
-                    "signed witness mismatch at output "
-                    f"{output_index}: {actual_signed} != {exact}"
-                )
+        if signed is not None and int(signed[output_index]) != exact:
+            raise AssertionError(
+                "signed witness mismatch at output "
+                f"{output_index}: {int(signed[output_index])} != {exact}"
+            )
 
 
 def _numpy_control(
@@ -178,31 +213,39 @@ def run_case(
 
     for _ in range(warmups):
         rns.accumulate_weighted_int32(partials, weights)
+        _run_staged(partials, weights)
 
-    accumulation_median, accumulation_min, receipt_object = _median_timing(
+    fused_median, fused_min, fused_object = _median_timing(
         lambda: rns.accumulate_weighted_int32(partials, weights),
         repeats,
     )
-    if not isinstance(receipt_object, rns.WeightedInt32Result):
-        raise TypeError("accumulator returned an unexpected result type")
-    receipt = receipt_object
+    staged_median, staged_min, staged_object = _median_timing(
+        lambda: _run_staged(partials, weights),
+        repeats,
+    )
+    if not isinstance(fused_object, rns.WeightedInt32Result):
+        raise TypeError("fused accumulator returned an unexpected result type")
+    if not isinstance(staged_object, rns.WeightedInt32Result):
+        raise TypeError("staged accumulator returned an unexpected result type")
 
-    decode_median, _, _ = _median_timing(receipt.decode_modular, repeats)
-    _verify_sample(partials, weights, receipt, sample_count)
+    fused = fused_object
+    staged = staged_object
+    _verify_receipts_match(fused, staged)
+    _verify_sample(partials, weights, fused, sample_count)
 
+    decode_median, _, _ = _median_timing(fused.decode_modular, repeats)
     nonzero_terms = sum(weight != 0 for weight in weights)
-    estimated_native_calls = 1 + 3 * nonzero_terms
     partial_values = terms * outputs
 
     numpy_median: float | None = None
-    ratio: float | None = None
+    fused_over_numpy: float | None = None
     int64_max = np.iinfo(np.int64).max
-    if receipt.certificate.max_abs_bound <= int64_max and all(
+    if fused.certificate.max_abs_bound <= int64_max and all(
         -int64_max - 1 <= weight <= int64_max for weight in weights
     ):
         numpy_median = _numpy_control(partials, weights, repeats)
         if numpy_median > 0:
-            ratio = accumulation_median / numpy_median
+            fused_over_numpy = fused_median / numpy_median
 
     return CaseResult(
         terms=terms,
@@ -210,40 +253,58 @@ def run_case(
         input_mib=partials.nbytes / (1024 * 1024),
         weight_mode=weight_mode,
         max_abs_partial=max_abs,
-        max_abs_bound=receipt.certificate.max_abs_bound,
-        unique_signed_result=receipt.certificate.unique,
-        signed_headroom=receipt.certificate.headroom,
-        estimated_native_calls=estimated_native_calls,
-        accumulation_median_seconds=accumulation_median,
-        accumulation_min_seconds=accumulation_min,
-        decode_median_seconds=decode_median,
-        partial_values_per_second=(
-            partial_values / accumulation_median if accumulation_median > 0 else float("inf")
+        max_abs_bound=fused.certificate.max_abs_bound,
+        unique_signed_result=fused.certificate.unique,
+        signed_headroom=fused.certificate.headroom,
+        fused_native_calls=1,
+        staged_native_calls=1 + 3 * nonzero_terms,
+        fused_median_seconds=fused_median,
+        fused_min_seconds=fused_min,
+        staged_median_seconds=staged_median,
+        staged_min_seconds=staged_min,
+        fused_speedup_over_staged=(
+            staged_median / fused_median if fused_median > 0 else float("inf")
         ),
-        output_values_per_second=(
-            outputs / accumulation_median if accumulation_median > 0 else float("inf")
+        decode_median_seconds=decode_median,
+        fused_partial_values_per_second=(
+            partial_values / fused_median if fused_median > 0 else float("inf")
+        ),
+        staged_partial_values_per_second=(
+            partial_values / staged_median if staged_median > 0 else float("inf")
+        ),
+        fused_output_values_per_second=(
+            outputs / fused_median if fused_median > 0 else float("inf")
         ),
         numpy_int64_control_median_seconds=numpy_median,
-        rns_over_numpy_ratio=ratio,
+        fused_over_numpy_ratio=fused_over_numpy,
     )
 
 
 def _print_result(result: CaseResult) -> None:
     print(
         f"terms={result.terms:>3} outputs={result.outputs:>9,} "
-        f"input={result.input_mib:>8.2f} MiB "
-        f"calls≈{result.estimated_native_calls:>3} "
-        f"accum={result.accumulation_median_seconds * 1e3:>10.3f} ms "
-        f"decode={result.decode_median_seconds * 1e3:>9.3f} ms "
-        f"partial-rate={result.partial_values_per_second / 1e6:>10.2f} M/s "
-        f"output-rate={result.output_values_per_second / 1e6:>10.2f} M/s "
-        f"unique={'yes' if result.unique_signed_result else 'no'}"
+        f"input={result.input_mib:>8.2f} MiB unique="
+        f"{'yes' if result.unique_signed_result else 'no'}"
+    )
+    print(
+        f"  fused: calls={result.fused_native_calls:>3} "
+        f"time={result.fused_median_seconds * 1e3:>10.3f} ms "
+        f"partial-rate={result.fused_partial_values_per_second / 1e6:>10.2f} M/s"
+    )
+    print(
+        f"  staged: calls≈{result.staged_native_calls:>3} "
+        f"time={result.staged_median_seconds * 1e3:>10.3f} ms "
+        f"partial-rate={result.staged_partial_values_per_second / 1e6:>10.2f} M/s"
+    )
+    print(
+        f"  fused speedup={result.fused_speedup_over_staged:.2f}x; "
+        f"decode={result.decode_median_seconds * 1e3:.3f} ms"
     )
     if result.numpy_int64_control_median_seconds is not None:
         print(
             "  int64 control: "
             f"{result.numpy_int64_control_median_seconds * 1e3:.3f} ms; "
-            f"RNS/control={result.rns_over_numpy_ratio:.2f}x"
+            f"fused/control={result.fused_over_numpy_ratio:.2f}x"
         )
     else:
         print("  int64 control: skipped because the exact bound or weights exceed int64")
