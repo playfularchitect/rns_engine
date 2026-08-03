@@ -171,7 +171,7 @@ out = session.decode_signed(session.add(a, b))
 
 ## Weighted INT32 partial accumulation
 
-Version 0.7 provides the fused direct bridge for digit-plane, chunked-GEMM, and Tensor Core pipelines.
+Version 0.7 introduced the fused direct bridge for digit-plane, chunked-GEMM, and Tensor Core pipelines.
 
 Give the engine signed INT32 partial outputs with shape:
 
@@ -223,7 +223,7 @@ Important details:
 - `decode_modular()` always returns the canonical residue in `[0, M)`.
 - Empty term sets produce an exact zero result.
 
-The current implementation uses one fused native `_weighted` call to read signed INT32 partials, collect exact per-term magnitude bounds, apply positional weights modulo `M`, and accumulate all four rails. The pre-fusion staged encode → scale → add body remains available internally as an exact reference for A/B tests. Local AVX2 diagnostics measured roughly 2.1×–2.9× speedup at one million outputs and larger gains on tiny many-term cases; those figures are hardware-specific CPU evidence, not CUDA, Tensor Core, or universal performance claims.
+The implementation uses one fused native `_weighted` call to read signed INT32 partials, collect exact per-term magnitude bounds, apply positional weights modulo `M`, and accumulate all four rails. The pre-fusion staged encode → scale → add body remains available internally as an exact reference for A/B tests. Local AVX2 diagnostics measured roughly 2.1×–2.9× speedup at one million outputs and larger gains on tiny many-term cases; those figures are hardware-specific CPU evidence, not CUDA, Tensor Core, or universal performance claims.
 
 A precomputed receipt can also be created without materializing partial arrays:
 
@@ -234,6 +234,45 @@ certificate = rns.certify_weighted_sum_bound(
 )
 certificate.require_unique()
 ```
+
+---
+
+## Exact GEMM capacity planning
+
+Version 0.8 separates two different safety questions that must not be conflated:
+
+1. Does each grouped raw digit-plane coefficient fit the native signed accumulator?
+2. Does the final radix-weighted result fit uniquely inside the global RNS modulus product?
+
+```python
+import rns_engine as rns
+
+local = rns.plan_grouped_coefficient_capacity(
+    inner_dimension=5120,
+    left_digit_abs_bounds=[127] * 8,
+    right_digit_abs_bounds=[127] * 8,
+    accumulator_bits=32,
+)
+
+global_plan = rns.plan_digit_plane_gemm_capacity(
+    inner_dimension=5120,
+    radix=128,
+    left_digit_abs_bounds=[127] * 8,
+    right_digit_abs_bounds=[127] * 8,
+)
+
+assert local.max_abs_bound == 660_643_840
+assert local.safe
+assert local.minimum_signed_accumulator_bits == 31
+
+assert global_plan.capacity.required_modulus_bits == 126
+assert global_plan.capacity.additional_bits_required == 71
+assert not global_plan.current_unique
+```
+
+That workload is locally safe in INT32 but globally modular-only in the current four-rail range. The planner can also validate explicit proposed CRT moduli and rejects candidates that are not pairwise coprime with the existing product.
+
+See [`CAPACITY_PLANNING.md`](CAPACITY_PLANNING.md) for the exact laws, examples, and limits of what the receipts prove.
 
 ---
 
@@ -261,6 +300,16 @@ certificate.require_unique()
 - `certify_weighted_sum_bound(weights, term_abs_bounds, addend_abs_bound=0)`
 - `WeightedInt32Result.decode_signed(require_unique=True)`
 - `WeightedInt32Result.decode_modular()`
+
+### Capacity planning
+
+- `plan_signed_capacity(max_abs_bound, additional_moduli=())`
+- `plan_weighted_sum_capacity(weights, term_abs_bounds, addend_abs_bound=0, additional_moduli=())`
+- `plan_digit_plane_gemm_capacity(inner_dimension, radix, left_digit_abs_bounds, right_digit_abs_bounds, ...)`
+- `plan_grouped_coefficient_capacity(inner_dimension, left_digit_abs_bounds, right_digit_abs_bounds, accumulator_bits=32)`
+- `SignedCapacityPlan`
+- `DigitPlaneGemmCapacityPlan`
+- `GroupedCoefficientCapacityPlan`
 
 ### Scalar-broadcast encoded operations
 
@@ -336,7 +385,7 @@ Workload: `affine_repeat_u64_io(x, 1_000_003, 7, iterations=1000)`
 - OpenMP with one thread: **82.80 billion ops/sec**
 - OpenMP with two threads: **94.86 billion ops/sec**
 
-These measurements cover the existing affine kernels, not the new weighted INT32 orchestration path.
+These measurements cover the existing affine kernels, not weighted INT32 reconstruction or the pure-Python capacity planners.
 
 ---
 
@@ -381,14 +430,15 @@ rns.HAS_AVX2
 
 ## Current release
 
-### v0.7.0
+### v0.8.0
 
+- exact local grouped-coefficient accumulator planning
+- exact global digit-plane GEMM RNS-capacity planning
+- strict separation between local INT32 safety and global signed uniqueness
+- candidate CRT-modulus validation with pairwise-coprime enforcement
+- exact modulus shortfall and additional-bit receipts
 - fused native weighted signed INT32 partial accumulation
-- one compiled pass for magnitude collection, positional weighting, and four-rail accumulation
-- staged reference body retained for exact fused-versus-staged A/B benchmarking
-- exact arbitrary-precision positional weights
-- per-term magnitude receipts and strict no-wrap certification
-- canonical modular and uniqueness-gated signed decode paths
+- arbitrary-precision positional weights and no-wrap certificates
 - canonical centered signed encoding and decoding
 - exact dot-product and GEMM output-bound receipts
 - `SignedSession` high-level API
