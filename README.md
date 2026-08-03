@@ -46,7 +46,7 @@ The centered signed interpretation lives in:
 pip install rns_engine
 ```
 
-Supported Python versions: **3.10–3.13**.
+Supported Python versions: **3.10–3.14**.
 
 ### AVX2 note
 
@@ -483,7 +483,7 @@ python -m pytest tests/ -v
 
 Requirements:
 
-- Python 3.10–3.13
+- Python 3.10–3.14
 - C++17 compiler
 - Access to the build dependencies declared in `pyproject.toml`
 
@@ -513,8 +513,11 @@ rns.HAS_AVX2
 
 ## Current release
 
-### v0.9.0
+### v0.10.0
 
+- prebuilt CPython 3.14 wheels for Linux x86-64, macOS Intel and Apple silicon, and Windows x64
+- direct native build and full test coverage on Python 3.10–3.14
+- Python 3.14-compatible pybind11 and NumPy build dependencies
 - configurable correctness-first CRT oracle for arbitrary pairwise-coprime rails
 - two lawful seven-rail profiles closing the 126-bit eight-plane target
 - exact signed radix-128 decomposition and reconstruction
@@ -529,7 +532,7 @@ rns.HAS_AVX2
 - fused native four-rail weighted signed INT32 accumulation
 - canonical centered signed encoding and no-wrap certificates
 
-The seven-rail body in 0.9 is a CPU correctness oracle, not a native CUDA or production-speed wide RNS kernel.
+Version 0.10 changes packaging and interpreter compatibility only; it does not change the RNS arithmetic body. The seven-rail body remains a CPU correctness oracle, not a native CUDA or production-speed wide RNS kernel.
 
 ---
 
