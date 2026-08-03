@@ -36,6 +36,7 @@ classifiers = [
 [project.optional-dependencies]
 test = [
   "pytest",
+  "tomli>=1; python_version < '3.11'",
   "numpy==2.2.6; python_version < '3.14'",
   "numpy==2.4.5; python_version >= '3.14'",
 ]
