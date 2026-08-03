@@ -157,3 +157,53 @@ def test_weighted_bound_validates_lengths_and_nonnegative_term_bounds():
 
     with pytest.raises(TypeError, match="addend_abs_bound"):
         rns.certify_weighted_sum_bound([1], [1], addend_abs_bound=1.5)
+
+
+def test_fused_weighted_kernel_matches_staged_reference_randomized():
+    from rns_engine.weighted import (
+        _accumulate_weighted_int32_staged,
+        _validate_weighted_inputs,
+    )
+
+    rng = np.random.default_rng(20260802)
+    for terms, outputs in [(0, 7), (1, 1), (2, 17), (5, 257), (9, 1024)]:
+        partials = rng.integers(
+            np.iinfo(np.int32).min,
+            np.iinfo(np.int32).max,
+            size=(terms, outputs),
+            dtype=np.int32,
+        )
+        weights = tuple(
+            ((-1) ** position) * (2 ** (13 * position) + 17)
+            for position in range(terms)
+        )
+
+        fused = rns.accumulate_weighted_int32(partials, weights)
+        flat, exact_weights, output_shape, output_size, _ = _validate_weighted_inputs(
+            partials,
+            weights,
+        )
+        staged_rails, staged_bounds = _accumulate_weighted_int32_staged(
+            flat,
+            exact_weights,
+            output_size,
+        )
+
+        assert fused.output_shape == output_shape
+        assert fused.term_abs_bounds == staged_bounds
+        for fused_rail, staged_rail in zip(fused.encoded.rails(), staged_rails):
+            np.testing.assert_array_equal(fused_rail, staged_rail)
+
+
+def test_fused_kernel_handles_noncontiguous_input_without_changing_result():
+    base = np.arange(4 * 20, dtype=np.int32).reshape(4, 20)
+    partials = base[:, ::2]
+    assert not partials.flags.c_contiguous
+
+    receipt = rns.accumulate_weighted_int32(partials, [1, -2, 3, -4])
+    expected = sum(
+        weight * term.astype(np.int64)
+        for weight, term in zip([1, -2, 3, -4], partials)
+    )
+
+    np.testing.assert_array_equal(receipt.decode_signed(), expected)

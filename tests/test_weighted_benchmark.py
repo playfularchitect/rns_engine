@@ -60,9 +60,12 @@ def test_tiny_benchmark_case_runs_with_exact_witnesses():
 
     assert result.terms == 2
     assert result.outputs == 8
-    assert result.estimated_native_calls == 7
+    assert result.fused_native_calls == 1
+    assert result.staged_native_calls == 7
+    assert result.fused_speedup_over_staged > 0
     assert result.max_abs_bound <= 14
     assert result.unique_signed_result is True
-    assert result.accumulation_median_seconds >= 0
+    assert result.fused_median_seconds >= 0
+    assert result.staged_median_seconds >= 0
     assert result.decode_median_seconds >= 0
     assert result.numpy_int64_control_median_seconds is not None
