@@ -394,6 +394,7 @@ rns.HAS_AVX2
 - `SignedSession` high-level API
 - four-rail native engine (`127 × 8191 × 65536 × 524287`)
 - AVX2, OpenMP, and auto-dispatch kernel families
+- release artifacts validated on Linux, macOS, and Windows for Python 3.10–3.13
 
 ---
 
