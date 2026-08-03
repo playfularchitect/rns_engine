@@ -276,6 +276,64 @@ See [`CAPACITY_PLANNING.md`](CAPACITY_PLANNING.md) for the exact laws, examples,
 
 ---
 
+## Pre-CUDA exact shared-scale GEMM
+
+Version 0.9 adds the complete CPU-side oracle and integration contract for the future CUDA/T4 body. Before using GPU credits, run:
+
+```bash
+rns-pre-cuda --report readiness.json --fixture t4_fixture.json
+```
+
+A green receipt proves:
+
+- both seven-rail profiles are pairwise coprime and close the 126-bit target;
+- radix-128 signed digit planes round-trip exactly;
+- grouped plane GEMMs fit INT32 for the frozen witness;
+- weighted seven-rail reconstruction equals direct Python-big-integer GEMM;
+- shared rational scales multiply exactly with no denominator GEMM;
+- the portable CUDA fixture and full backend verifier agree.
+
+The future CUDA backend must implement both methods in the contract:
+
+```python
+class ExactPipelineBackend:
+    def grouped_partials(self, left_planes, right_planes):
+        ...  # INT8 Tensor Core / cuBLASLt grouped coefficients
+
+    def weighted_rails(self, grouped_partials, weights, moduli):
+        ...  # GPU seven-rail modular weighting and accumulation
+```
+
+The verifier refuses a backend that produces correct GEMM partials but silently falls back to CPU RNS. See [`PRE_CUDA_READINESS.md`](PRE_CUDA_READINESS.md), [`CUDA_PARALLEL_LANES.md`](CUDA_PARALLEL_LANES.md), and [`colab/T4_EXACT_GEMM_BRINGUP.ipynb`](colab/T4_EXACT_GEMM_BRINGUP.ipynb).
+
+```python
+import numpy as np
+import rns_engine as rns
+
+left = rns.SharedScaleMatrix(
+    np.array([[2**40 + 3, -17], [29, 2**35 - 5]], dtype=object),
+    scale=6,
+)
+right = rns.SharedScaleMatrix(
+    np.array([[31, -(2**30) + 9], [2**33 + 1, 43]], dtype=object),
+    scale=35,
+)
+
+receipt = rns.exact_shared_scale_gemm(
+    left,
+    right,
+    config=rns.WideRNSConfig.balanced_seven_rail(),
+    left_plane_count=8,
+    right_plane_count=8,
+)
+
+assert receipt.exact_match
+assert receipt.output_scale == 210
+result = receipt.as_matrix()
+```
+
+---
+
 ## Core API
 
 ### Rail operations
@@ -310,6 +368,31 @@ See [`CAPACITY_PLANNING.md`](CAPACITY_PLANNING.md) for the exact laws, examples,
 - `SignedCapacityPlan`
 - `DigitPlaneGemmCapacityPlan`
 - `GroupedCoefficientCapacityPlan`
+
+### Wide reference and pre-CUDA APIs
+
+- `WideRNSConfig.current()`
+- `WideRNSConfig.smallest_product_seven_rail()`
+- `WideRNSConfig.balanced_seven_rail()`
+- `accumulate_weighted_int32_wide(...)`
+- `SharedScaleMatrix`
+- `exact_integer_matmul(...)`
+- `decompose_signed_radix(...)` / `reconstruct_signed_radix(...)`
+- `grouped_plane_gemm(...)` / `reconstruct_grouped_partials(...)`
+- `exact_shared_scale_gemm(...)`
+- `CudaGemmFixture`
+- `CpuExactPipelineBackend`
+- `build_cuda_gemm_fixture(...)`
+- `verify_backend(...)`
+- `run_pre_cuda_readiness()`
+- `build_default_pre_cuda_fixture()`
+
+### Parallel rail-lane planning
+
+- `build_parallel_rail_prior(capacity)`
+- `RailLearningLane`
+- `ParallelRailPrior`
+- `search_mersenne_rails_for_capacity(...)`
 
 ### Scalar-broadcast encoded operations
 
@@ -430,20 +513,23 @@ rns.HAS_AVX2
 
 ## Current release
 
-### v0.8.0
+### v0.9.0
 
-- exact local grouped-coefficient accumulator planning
-- exact global digit-plane GEMM RNS-capacity planning
-- strict separation between local INT32 safety and global signed uniqueness
-- candidate CRT-modulus validation with pairwise-coprime enforcement
-- exact modulus shortfall and additional-bit receipts
-- fused native weighted signed INT32 partial accumulation
-- arbitrary-precision positional weights and no-wrap certificates
-- canonical centered signed encoding and decoding
-- exact dot-product and GEMM output-bound receipts
-- `SignedSession` high-level API
-- four-rail native engine (`127 × 8191 × 65536 × 524287`)
-- AVX2, OpenMP, and auto-dispatch kernel families
+- configurable correctness-first CRT oracle for arbitrary pairwise-coprime rails
+- two lawful seven-rail profiles closing the 126-bit eight-plane target
+- exact signed radix-128 decomposition and reconstruction
+- exact grouped digit-plane GEMM coefficients with strict INT32 overflow refusal
+- exact shared-scale rational GEMM with integer numerator and scale receipts
+- portable JSON CUDA fixture containing inputs, planes, partials, rails, and answer
+- full backend contract requiring both grouped partials and GPU rail accumulation
+- deterministic pre-CUDA readiness command and frozen witness
+- parallel rail-lane shared-prior plan with hard correctness firewall
+- Colab/T4 bring-up notebook with one isolated CUDA integration point
+- exact Mersenne rail-set search and local/global capacity planners
+- fused native four-rail weighted signed INT32 accumulation
+- canonical centered signed encoding and no-wrap certificates
+
+The seven-rail body in 0.9 is a CPU correctness oracle, not a native CUDA or production-speed wide RNS kernel.
 
 ---
 

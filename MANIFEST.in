@@ -1,0 +1,8 @@
+include LICENSE
+include README.md
+include CAPACITY_PLANNING.md
+include PRE_CUDA_READINESS.md
+include CUDA_PARALLEL_LANES.md
+recursive-include benchmarks *.py
+recursive-include colab *.ipynb
+recursive-include tests *.py

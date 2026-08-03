@@ -75,6 +75,47 @@ from .rail_planning import (
     search_mersenne_rail_sets,
     search_mersenne_rails_for_capacity,
 )
+from .wide import (
+    BALANCED_EXTRA_EXPONENTS,
+    BASE_MODULI,
+    SMALLEST_PRODUCT_EXTRA_EXPONENTS,
+    WideRNSConfig,
+    WideWeightedResult,
+    accumulate_weighted_int32_wide,
+    mersenne_modulus,
+    moduli_from_mersenne_exponents,
+)
+from .exact_gemm import (
+    ExactSharedScaleGemmReceipt,
+    SharedScaleMatrix,
+    decompose_signed_radix,
+    exact_integer_matmul,
+    exact_shared_scale_gemm,
+    grouped_plane_gemm,
+    reconstruct_grouped_partials,
+    reconstruct_signed_radix,
+)
+from .cuda_contract import (
+    BackendVerification,
+    CpuExactPipelineBackend,
+    CpuGroupedPartialsBackend,
+    CudaGemmFixture,
+    ExactPipelineBackend,
+    build_cuda_gemm_fixture,
+    verify_backend,
+)
+from .lane_plan import (
+    ParallelRailPrior,
+    RailLearningLane,
+    build_parallel_rail_prior,
+)
+from .pre_cuda import (
+    PreCudaReadinessReport,
+    build_default_pre_cuda_fixture,
+    default_pre_cuda_matrices,
+    run_pre_cuda_readiness,
+)
+
 
 try:
     __version__ = _distribution_version("rns_engine")
@@ -107,6 +148,20 @@ __all__ = [
     "plan_digit_plane_gemm_capacity", "plan_grouped_coefficient_capacity",
     "MersenneRailCandidate", "MersenneRailSetPlan", "MersenneRailSearchResult",
     "search_mersenne_rail_sets", "search_mersenne_rails_for_capacity",
+    "BASE_MODULI", "SMALLEST_PRODUCT_EXTRA_EXPONENTS",
+    "BALANCED_EXTRA_EXPONENTS", "WideRNSConfig", "WideWeightedResult",
+    "mersenne_modulus", "moduli_from_mersenne_exponents",
+    "accumulate_weighted_int32_wide",
+    "SharedScaleMatrix", "ExactSharedScaleGemmReceipt",
+    "exact_integer_matmul", "decompose_signed_radix",
+    "reconstruct_signed_radix", "grouped_plane_gemm",
+    "reconstruct_grouped_partials", "exact_shared_scale_gemm",
+    "CudaGemmFixture", "BackendVerification", "ExactPipelineBackend",
+    "CpuExactPipelineBackend", "CpuGroupedPartialsBackend",
+    "build_cuda_gemm_fixture", "verify_backend",
+    "RailLearningLane", "ParallelRailPrior", "build_parallel_rail_prior",
+    "PreCudaReadinessReport", "default_pre_cuda_matrices",
+    "build_default_pre_cuda_fixture", "run_pre_cuda_readiness",
     "info",
 ]
 
@@ -121,3 +176,4 @@ def info():
     print("  Core APIs     : add/sub/mul/fma + raw/omp/auto scalar-broadcast family")
     print("  Bridge APIs   : weighted signed INT32 accumulation with range receipts")
     print("  Planning APIs : local/global capacity + exact Mersenne rail-set search")
+    print("  Pre-CUDA APIs : seven-rail oracle + exact shared-scale GEMM fixtures")
