@@ -1,6 +1,10 @@
 from importlib.metadata import version
 from pathlib import Path
-import tomllib
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10
+    import tomli as tomllib
 
 import rns_engine
 
@@ -33,3 +37,4 @@ def test_python_314_uses_compatible_native_build_dependencies():
     assert "pybind11>=3.0.0" in build_requires
     assert "numpy==2.4.5; python_version >= '3.14'" in build_requires
     assert "numpy==2.4.5; python_version >= '3.14'" in test_requires
+    assert "tomli>=1; python_version < '3.11'" in test_requires
