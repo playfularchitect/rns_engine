@@ -171,7 +171,7 @@ out = session.decode_signed(session.add(a, b))
 
 ## Weighted INT32 partial accumulation
 
-Version 0.6 adds the first direct bridge for digit-plane, chunked-GEMM, and Tensor Core pipelines.
+Version 0.7 provides the fused direct bridge for digit-plane, chunked-GEMM, and Tensor Core pipelines.
 
 Give the engine signed INT32 partial outputs with shape:
 
@@ -223,7 +223,7 @@ Important details:
 - `decode_modular()` always returns the canonical residue in `[0, M)`.
 - Empty term sets produce an exact zero result.
 
-The current implementation is an evidence-first baseline. Python schedules terms, while each per-element encode, scalar-weight multiply, and rail addition runs through the compiled native kernels. It is **not yet one fused C++ weighted-accumulation kernel**, and no fused-kernel speed claim is made.
+The current implementation uses one fused native `_weighted` call to read signed INT32 partials, collect exact per-term magnitude bounds, apply positional weights modulo `M`, and accumulate all four rails. The pre-fusion staged encode → scale → add body remains available internally as an exact reference for A/B tests. Local AVX2 diagnostics measured roughly 2.1×–2.9× speedup at one million outputs and larger gains on tiny many-term cases; those figures are hardware-specific CPU evidence, not CUDA, Tensor Core, or universal performance claims.
 
 A precomputed receipt can also be created without materializing partial arrays:
 
@@ -381,9 +381,11 @@ rns.HAS_AVX2
 
 ## Current release
 
-### v0.6.0
+### v0.7.0
 
-- weighted signed INT32 partial accumulation
+- fused native weighted signed INT32 partial accumulation
+- one compiled pass for magnitude collection, positional weighting, and four-rail accumulation
+- staged reference body retained for exact fused-versus-staged A/B benchmarking
 - exact arbitrary-precision positional weights
 - per-term magnitude receipts and strict no-wrap certification
 - canonical modular and uniqueness-gated signed decode paths
