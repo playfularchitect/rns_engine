@@ -108,11 +108,16 @@ class Candidate:
 
     @property
     def fingerprint(self) -> str:
+        """Genotype identity including mutation history."""
+        return _digest({"genome": self.genome, "parent_id": self.parent_id})
+
+    @property
+    def execution_fingerprint(self) -> str:
+        """Phenotype identity used by the exact no-repeat ledger."""
         return _digest(
             {
-                "candidate_id": self.candidate_id,
-                "genome": self.genome,
-                "parent_id": self.parent_id,
+                "features": list(self.features),
+                "parameters": dict(self.parameters),
             }
         )
 
@@ -128,6 +133,7 @@ class Candidate:
             "expected_memory_cost": self.expected_memory_cost,
             "genome": self.genome,
             "fingerprint": self.fingerprint,
+            "execution_fingerprint": self.execution_fingerprint,
         }
 
 
