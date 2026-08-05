@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
+import math
 from typing import Any, Iterable, Mapping
 
 from .capsule import G4Capsule
@@ -56,7 +56,7 @@ class G4Learner:
 
     @staticmethod
     def evaluation_key(boundary: SearchBoundary, candidate: Candidate) -> str:
-        return f"{boundary.fingerprint}:{candidate.fingerprint}"
+        return f"{boundary.fingerprint}:{candidate.execution_fingerprint}"
 
     @staticmethod
     def _weight_key(context: str, feature: str) -> str:
@@ -94,11 +94,18 @@ class G4Learner:
         )
         return base - cost
 
-    def _credited_features(self, candidate: Candidate, parent: Candidate | None) -> tuple[str, ...]:
+    def _credit_directions(self, candidate: Candidate, parent: Candidate | None) -> dict[str, int]:
         if parent is None:
-            return candidate.features
-        changed = sorted(set(candidate.features).symmetric_difference(parent.features))
-        return tuple(changed or candidate.features)
+            return {feature: 1 for feature in candidate.features}
+        candidate_features = set(candidate.features)
+        parent_features = set(parent.features)
+        added = candidate_features - parent_features
+        removed = parent_features - candidate_features
+        if not added and not removed:
+            return {feature: 1 for feature in candidate.features}
+        directions = {feature: 1 for feature in added}
+        directions.update({feature: -1 for feature in removed})
+        return directions
 
     def observe(
         self,
@@ -112,23 +119,31 @@ class G4Learner:
         if key in self.evaluated:
             raise ValueError("candidate already evaluated inside this boundary")
         decision = self.judge.decide(observation)
+        if decision == "JUDGE_CONTRACT_VIOLATION":
+            raise ValueError("observation violates the immutable judge evidence contract")
         reward = self._reward(candidate, observation, decision)
-        credited = self._credited_features(candidate, parent)
+        directions = self._credit_directions(candidate, parent)
         contexts = boundary.context_tokens()
+        added_features = {feature for feature, direction in directions.items() if direction > 0}
 
         for context in contexts:
-            for feature in credited:
+            for feature, direction in directions.items():
+                signed_reward = reward * direction
                 weight_key = self._weight_key(context, feature)
                 old = self.weights.get(weight_key, 0.0)
-                self.weights[weight_key] = old + self.config.learning_rate * (reward - old)
+                self.weights[weight_key] = old + self.config.learning_rate * (signed_reward - old)
                 self.counts[weight_key] = self.counts.get(weight_key, 0) + 1
-                feature_key = self._feature_count_key(boundary, context, feature)
-                self.feature_counts[feature_key] = self.feature_counts.get(feature_key, 0) + 1
-                residue_key = self._residue_key(boundary, context, feature, decision)
-                self.residue_counts[residue_key] = self.residue_counts.get(residue_key, 0) + 1
-            if len(credited) >= 2:
-                for index, left in enumerate(credited):
-                    for right in credited[index + 1 :]:
+                if direction > 0:
+                    feature_key = self._feature_count_key(boundary, context, feature)
+                    self.feature_counts[feature_key] = self.feature_counts.get(feature_key, 0) + 1
+                    residue_key = self._residue_key(boundary, context, feature, decision)
+                    self.residue_counts[residue_key] = self.residue_counts.get(residue_key, 0) + 1
+            interaction_features = candidate.features if parent is None else tuple(
+                feature for feature in candidate.features if feature in added_features
+            )
+            if len(interaction_features) >= 2:
+                for index, left in enumerate(interaction_features):
+                    for right in interaction_features[index + 1 :]:
                         interaction_key = self._interaction_key(context, left, right)
                         old = self.interaction_weights.get(interaction_key, 0.0)
                         rate = self.config.interaction_learning_rate
@@ -153,6 +168,7 @@ class G4Learner:
                 self.champions[boundary.fingerprint] = {
                     "candidate_id": candidate.candidate_id,
                     "candidate_fingerprint": candidate.fingerprint,
+                    "execution_fingerprint": candidate.execution_fingerprint,
                     "speedup": observation.speedup,
                     "experience": experience.fingerprint,
                 }
