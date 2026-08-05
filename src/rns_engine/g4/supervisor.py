@@ -41,7 +41,7 @@ class MidRunSupervisor:
     ) -> RunSummary:
         if budget <= 0:
             raise ValueError("budget must be positive")
-        pool: dict[str, Candidate] = {candidate.fingerprint: candidate for candidate in candidates}
+        pool: dict[str, Candidate] = {candidate.execution_fingerprint: candidate for candidate in candidates}
         order: list[str] = []
         decisions: list[str] = []
         evaluated = 0
@@ -68,7 +68,7 @@ class MidRunSupervisor:
             if generator is not None and evaluated % generation_interval == 0:
                 generated = generator(boundary, self.learner, tuple(pool.values()))
                 for new_candidate in generated:
-                    pool.setdefault(new_candidate.fingerprint, new_candidate)
+                    pool.setdefault(new_candidate.execution_fingerprint, new_candidate)
 
         remaining = self.learner.rank(boundary, pool.values())
         patterns = tuple(self.learner.patterns(boundary))
