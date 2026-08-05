@@ -43,6 +43,7 @@ test = [
 
 [project.scripts]
 rns-pre-cuda = "rns_engine.pre_cuda:main"
+rns-tier-bench = "rns_engine.tier_benchmark:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
