@@ -115,6 +115,30 @@ from .pre_cuda import (
     default_pre_cuda_matrices,
     run_pre_cuda_readiness,
 )
+from .tiers import (
+    ExactRangeError,
+    ExactValueError,
+    PromotionPolicy,
+    G4Tier,
+    G4Scalar,
+    G4Array,
+    G416,
+    G432,
+    G464,
+    G4X,
+    exact16,
+    exact32,
+    exact64,
+    exact,
+    as_fraction,
+    resolve_tier,
+    current_promotion_policy,
+    strict_exact,
+    promote_exact,
+    scalar,
+    tensor,
+    tier_table,
+)
 
 
 try:
@@ -162,6 +186,12 @@ __all__ = [
     "RailLearningLane", "ParallelRailPrior", "build_parallel_rail_prior",
     "PreCudaReadinessReport", "default_pre_cuda_matrices",
     "build_default_pre_cuda_fixture", "run_pre_cuda_readiness",
+    "ExactRangeError", "ExactValueError", "PromotionPolicy",
+    "G4Tier", "G4Scalar", "G4Array",
+    "G416", "G432", "G464", "G4X",
+    "exact16", "exact32", "exact64", "exact",
+    "as_fraction", "resolve_tier", "current_promotion_policy",
+    "strict_exact", "promote_exact", "scalar", "tensor", "tier_table",
     "info",
 ]
 
@@ -177,3 +207,4 @@ def info():
     print("  Bridge APIs   : weighted signed INT32 accumulation with range receipts")
     print("  Planning APIs : local/global capacity + exact Mersenne rail-set search")
     print("  Pre-CUDA APIs : seven-rail oracle + exact shared-scale GEMM fixtures")
+    print("  G4 tiers      : G416 / G432 / G464 strict exact range contracts")
