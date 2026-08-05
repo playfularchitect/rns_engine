@@ -29,9 +29,15 @@ class JudgeLaw:
             return "ILLEGAL"
         if self.require_exact and not observation.exact:
             return "INEXACT"
+        if observation.blocks != self.paired_blocks:
+            return "JUDGE_CONTRACT_VIOLATION"
+        if observation.wins < 0 or observation.wins > observation.blocks:
+            return "JUDGE_CONTRACT_VIOLATION"
+        if observation.speedup <= 0 or observation.confidence_lower <= 0:
+            return "JUDGE_CONTRACT_VIOLATION"
         if observation.speedup <= self.minimum_speedup:
             return "BELOW_SPEED"
-        if observation.blocks <= 0 or observation.wins / observation.blocks < self.minimum_win_fraction:
+        if observation.wins / observation.blocks < self.minimum_win_fraction:
             return "LOW_WIN_RATE"
         if observation.confidence_lower <= self.minimum_confidence_lower:
             return "LOW_CONFIDENCE"
