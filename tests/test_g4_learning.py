@@ -72,6 +72,8 @@ def test_no_repeat_ledger_is_enforced():
     body = candidate("one", "direct")
     learner.observe(target, body, win())
     assert learner.rank(target, [body]) == []
+    duplicate = Candidate.create("renamed", features=("direct",), mutation_ops=("different_history",))
+    assert learner.rank(target, [duplicate]) == []
     with pytest.raises(ValueError):
         learner.observe(target, body, win())
 
@@ -82,9 +84,10 @@ def test_parent_child_credit_focuses_changed_features():
     parent = candidate("parent", "direct", "reuse_a")
     child = Candidate.create("child", features=("direct", "reuse_ab"), parent_id="parent")
     learner.observe(target, child, win(), parent=parent)
-    keys = "\n".join(learner.weights)
-    assert "reuse_ab" in keys
-    assert "reuse_a" in keys
+    added_weights = [value for key, value in learner.weights.items() if key.endswith("␟reuse_ab")]
+    removed_weights = [value for key, value in learner.weights.items() if key.endswith("␟reuse_a")]
+    assert added_weights and all(value > 0 for value in added_weights)
+    assert removed_weights and all(value < 0 for value in removed_weights)
 
 
 def test_capsule_checkpoint_resume_and_judge_guard(tmp_path: Path):
@@ -127,3 +130,14 @@ def test_residue_patterns_extract_repeated_failure_structure():
         learner.observe(target, candidate(f"s{index}", "shared", f"variant{index}"), loss())
     patterns = learner.patterns(target, minimum_support=3, minimum_rate=0.75)
     assert any(pattern.feature == "shared" and pattern.residue == "BELOW_SPEED" for pattern in patterns)
+
+
+def test_malformed_evidence_is_rejected_without_learning():
+    learner = G4Learner()
+    target = boundary()
+    body = candidate("bad_evidence", "direct")
+    malformed = Observation(True, True, True, 1.2, 1.1, 27, 30)
+    with pytest.raises(ValueError):
+        learner.observe(target, body, malformed)
+    assert learner.experience_count == 0
+    assert not learner.evaluated
