@@ -45,6 +45,7 @@ test = [
 rns-pre-cuda = "rns_engine.pre_cuda:main"
 rns-tier-bench = "rns_engine.tier_benchmark:main"
 rns-g4-learn-demo = "rns_engine.g4.demo:main"
+rns-g4-master-key-demo = "rns_engine.g4.master_key_demo:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
