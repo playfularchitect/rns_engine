@@ -116,7 +116,7 @@ from .pre_cuda import (
     run_pre_cuda_readiness,
 )
 from .g4_results import g4_results
-from .g4_benchmark import g4_benchmark
+from .g4_trust import g4_benchmark
 
 
 try:
