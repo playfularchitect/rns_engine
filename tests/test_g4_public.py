@@ -10,6 +10,8 @@ def _fake_species(name):
         "exact_replay_passed": True,
         "exact_median_ms": 1.0,
         "fraction_end_to_end_median_ms": 1.2,
+        "speedup_fp16_over_exact": 1.25,
+        "live_decision": "EXACT_WIN",
     }]
     return {
         "summary": {
@@ -45,7 +47,7 @@ def test_combined_benchmark_runs_integer_then_rational(monkeypatch):
     assert len(got["combined_receipt_sha256"]) == 64
 
 
-def test_combined_output_prints_xops_key_once(monkeypatch):
+def test_combined_output_prints_xops_key_once_and_integer_distribution(monkeypatch):
     monkeypatch.setattr(public, "_g4_integer_benchmark", lambda *a, **k: _fake_species("integer"))
     monkeypatch.setattr(public, "_g4_rational_benchmark", lambda *a, **k: _fake_species("rational"))
     stream = StringIO()
@@ -53,5 +55,9 @@ def test_combined_output_prints_xops_key_once(monkeypatch):
     text = stream.getvalue()
     assert text.count("XOPS / G4OPS KEY") == 1
     assert "PART 1 / 2: G4 INTEGERS" in text
+    assert "G4 INTEGERS - SPEED DISTRIBUTION - FRESH RUN" in text
+    assert "All 1 shapes: 1.250x geomean | 1.250x median" in text
+    assert "G4-winning shapes: 1.250x geomean | 1.250x median | 1.250x best" in text
+    assert "NVIDIA-winning shapes: none in this run" in text
     assert "PART 2 / 2: G4 RATIONALS" in text
     assert "No combined win percentage" in text
