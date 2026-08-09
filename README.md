@@ -79,6 +79,14 @@ assert C.dtype == np.int32
 
 `g4_matmul()` accepts signed-INT8 integer matrices on the certified Series 1 shapes and returns the exact signed-INT32 result.
 
+### Benchmark timing vs `g4_matmul()` wall time
+
+The frozen Series 1 speed results are **resident-data GPU GEMM benchmarks**. They measure the computation with GPU data already resident and do not include Python-call overhead or CPU↔GPU transfer time.
+
+`g4_matmul()` is currently a **CPU-NumPy convenience API**: it accepts CPU arrays and returns a CPU NumPy result. Its end-to-end wall time therefore includes data movement and runtime/wrapper work that the resident-data benchmark excludes.
+
+Do **not** compare a pre-resident PyTorch GPU-kernel timing directly with CPU→CPU `g4_matmul()` wall time. A fair comparison must use the same timing boundary on both sides. Series 1 does not claim that one-shot CPU-NumPy→CPU-NumPy `g4_matmul()` calls beat pre-resident PyTorch GPU GEMM calls.
+
 A `SharedScaleMatrix` represents one integer numerator matrix divided by one positive integer scale:
 
 ```python
@@ -144,6 +152,8 @@ The public runners report exactness, speed classifications, XOPS/G4OPS, runtime/
 ### How speed certification works
 
 The public replay first checks correctness, then uses repeated paired timings on the same T4 to classify speed.
+
+The headline Series 1 timing boundary is **resident-data GEMM execution**, not one-shot CPU-array API wall time. Setup, Python overhead, and CPU↔GPU transfer costs are not part of the frozen kernel-speed claim.
 
 For the current integer public replay, winner classification uses **31 paired timing blocks per shape**, **20,000 bootstrap resamples**, a **95% confidence interval**, a **1.002 promotion threshold**, and at least **20 / 31 winning blocks**. Runtime or exactness failures fail closed.
 
@@ -259,6 +269,7 @@ g4_matmul
 - Shared-scale rational outputs are exact and use one positive Python-integer scale per matrix; output scale is the exact product of the inputs, with optional explicit reduction.
 - Series 1 does not claim arbitrary per-element rational denominators or general rational normalization.
 - Unsupported G4 shapes or representations fail closed rather than silently falling back to approximate floating point.
+- The frozen benchmark reports **resident-data GPU GEMM speed**; one-shot `g4_matmul()` CPU-array wall time is a different timing boundary.
 - Integer and rational benchmark scores are always reported separately.
 - Future G4 generations are treated as separate Series rather than rewriting frozen Series 1 evidence.
 
