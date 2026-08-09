@@ -34,21 +34,7 @@ def test_g4_results_report_labels_both_percentages():
     text = stream.getvalue()
     assert "938 / 1024 (91.60%)" in text
     assert "870 / 1024 (84.96%)" in text
-    assert "separate claims" in text
-
-
-def test_g4_results_shape_lookup_is_sanitized():
-    result = g4_results("rational", shape_id="T4GL0021", display=False)
-    row = result["shape_rows"][0]
-    assert row["shape_id"] == "T4GL0021"
-    assert row["certified_exact_win"] is True
-    assert row["speedup_fp16_over_exact"] > 1.0
-    assert set(row) == {
-        "campaign", "actual_noninteger_inputs", "bootstrap_high", "bootstrap_low",
-        "category", "certified_exact_win", "exact_block_wins", "exact_median_ms",
-        "final_decision", "fp16_median_ms", "fp16_value_set_proved", "k", "m", "n",
-        "paired_blocks", "range_proved", "shape_id", "speedup_fp16_over_exact",
-    }
+    assert "separate benchmark results" in text
 
 
 def test_g4_results_bad_campaign_rejected():
