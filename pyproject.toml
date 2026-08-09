@@ -41,9 +41,6 @@ test = [
   "numpy==2.4.5; python_version >= '3.14'",
 ]
 
-[project.scripts]
-rns-pre-cuda = "rns_engine.pre_cuda:main"
-
 [tool.setuptools]
 package-dir = {"" = "src"}
 include-package-data = true
