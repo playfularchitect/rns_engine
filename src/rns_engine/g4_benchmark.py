@@ -9,9 +9,9 @@ collection, and the frozen statistical certification rule.
 from __future__ import annotations
 
 import base64
-import gzip
 import hashlib
 import json
+import lzma
 import queue
 import random
 from importlib import resources
@@ -57,7 +57,7 @@ def _runtime_metadata() -> dict:
         raise RuntimeError("unrecognized G4 Series 1 T4 runtime metadata schema")
     if meta.get("privacy_scan_passed") is not True:
         raise RuntimeError("G4 Series 1 T4 runtime metadata failed its release gate")
-    if meta.get("payload_format") != "base64+gzip":
+    if meta.get("payload_format") != "base64+xz":
         raise RuntimeError("unsupported G4 Series 1 replay payload format")
     return meta
 
@@ -91,7 +91,7 @@ def _load_runtime_bytes(meta: dict) -> bytes:
         )
     try:
         compressed = base64.b64decode(payload_bytes, validate=False)
-        binary = gzip.decompress(compressed)
+        binary = lzma.decompress(compressed)
     except Exception as exc:
         raise RuntimeError("G4 replay payload could not be decoded") from exc
     actual_binary_sha = _sha256_bytes(binary)
