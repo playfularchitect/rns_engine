@@ -6,8 +6,9 @@ import rns_engine.g4_runtime as runtime
 def test_certified_public_runtime_payload_and_members_are_integrity_checked():
     meta = runtime.runtime_metadata()
     root = runtime.extracted_runtime_root()
-    assert meta["schema"] == "RNS-ENGINE-G4S1-PUBLIC-T4-RUNTIME-2"
+    assert meta["schema"] == "RNS-ENGINE-G4S1-PUBLIC-T4-SOURCE-RUNTIME-1"
     assert meta["supported_shapes"] == 1024
+    assert meta["privacy_boundary"].startswith("public execution sources only")
     for name, expected in meta["members_sha256"].items():
         raw = (root / name).read_bytes()
         assert hashlib.sha256(raw).hexdigest() == expected
