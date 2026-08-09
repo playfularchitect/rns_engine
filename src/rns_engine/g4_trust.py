@@ -24,6 +24,54 @@ from .g4_benchmark import (
 
 _TRUST_SCHEMA = "RNS-ENGINE-G4S1-TRUST-PACK-1"
 
+_LIVE_REPORT_REPLACEMENTS = (
+    ("EXACTNESS - FRESH RUN", "G4 RATIONALS - EXACTNESS - FRESH RUN"),
+    (
+        "SPEED - FRESH RUN DIRECTLY AGAINST NVIDIA FP16",
+        "G4 RATIONALS - SPEED vs NVIDIA FP16 - FRESH RUN",
+    ),
+    ("REPRODUCIBILITY", "G4 RATIONALS - REPRODUCIBILITY"),
+    ("Exact rational calculations correct:", "G4 rational calculations correct:"),
+    ("Exact rational faster:", "G4 RATIONALS faster than NVIDIA FP16:"),
+    ("NVIDIA FP16 faster:", "NVIDIA FP16 faster than G4 RATIONALS:"),
+    ("Too close to call:", "G4 RATIONALS / NVIDIA FP16 statistical ties:"),
+    ("Median speedup when exact wins:", "Median speedup when G4 RATIONALS win:"),
+    (
+        "Same winner/tie result as original:",
+        "RATIONAL winner/tie classification matches original RATIONAL benchmark:",
+    ),
+)
+
+
+class _RationalLiveReportStream:
+    """Relabel the existing live report without touching benchmark math or progress output."""
+
+    def __init__(self, target: TextIO):
+        self._target = target
+
+    @staticmethod
+    def _replace(text: str) -> str:
+        for old, new in _LIVE_REPORT_REPLACEMENTS:
+            text = text.replace(old, new)
+        return text
+
+    def _rewrite_line(self, line: str) -> str:
+        newline = "\n" if line.endswith("\n") else ""
+        body = line[:-1] if newline else line
+        if body.startswith("| ") and body.endswith(" |"):
+            inner_width = len(body) - 4
+            content = body[2:-2].rstrip()
+            content = self._replace(content)
+            return "| " + content[:inner_width].ljust(inner_width) + " |" + newline
+        return self._replace(body) + newline
+
+    def write(self, text: str) -> int:
+        rewritten = "".join(self._rewrite_line(line) for line in text.splitlines(keepends=True))
+        return self._target.write(rewritten)
+
+    def flush(self) -> None:
+        self._target.flush()
+
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
@@ -156,41 +204,6 @@ def _add_species_labels(result: dict) -> None:
         summary["rational_frozen_decision_matches"] = summary["frozen_decision_matches"]
 
 
-def _print_rational_live_summary(result: dict, stream: TextIO) -> None:
-    summary = result.get("summary", {})
-    total = int(summary.get("shapes_run", len(result.get("rows", []))))
-    exact_failures = int(summary.get("exact_replay_failures", 0))
-    runtime_errors = int(summary.get("runtime_errors", 0))
-    exact_rows = max(0, total - exact_failures - runtime_errors)
-    g4_wins = int(summary.get("live_exact_wins", 0))
-    nvidia_wins = int(summary.get("live_floating_wins", 0))
-    ties = int(summary.get("live_statistical_ties", 0))
-    matches = int(
-        summary.get(
-            "rational_frozen_decision_matches",
-            summary.get("frozen_decision_matches", 0),
-        )
-    )
-
-    def pct(value: int) -> str:
-        return f"{value / total * 100:.2f}%" if total else "0.00%"
-
-    _box(
-        "G4 RATIONALS - FRESH RUN SUMMARY",
-        [
-            "Every number in this box refers to the RATIONAL benchmark only.",
-            f"G4 rational calculations correct: {exact_rows} / {total}",
-            f"G4 RATIONALS faster than NVIDIA FP16: {g4_wins} / {total} ({pct(g4_wins)})",
-            f"NVIDIA FP16 faster than G4 RATIONALS: {nvidia_wins} / {total} ({pct(nvidia_wins)})",
-            f"G4 RATIONALS / NVIDIA FP16 statistical ties: {ties} / {total} ({pct(ties)})",
-            f"RATIONAL winner/tie classification matches original rational benchmark: {matches} / {total} ({pct(matches)})",
-            "Frozen G4 INTEGER result was not rerun by this command.",
-        ],
-        stream,
-        width=112,
-    )
-
-
 def _make_trust_pack(
     result: dict,
     *,
@@ -315,7 +328,8 @@ def g4_benchmark(
         _print_test_scope(out)
         print(file=out)
 
-    result = _core_g4_benchmark(mode, display=display, stream=out)
+    live_out = _RationalLiveReportStream(out) if display else out
+    result = _core_g4_benchmark(mode, display=display, stream=live_out)
     _add_species_labels(result)
 
     gpu_after = _gpu_state_snapshot()
@@ -333,8 +347,6 @@ def g4_benchmark(
     result["trust_pack"] = trust
 
     if display:
-        print(file=out)
-        _print_rational_live_summary(result, out)
         print(file=out)
         _print_trust_pack(trust, out)
 
