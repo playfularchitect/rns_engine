@@ -1,0 +1,41 @@
+{
+  "binary_name": "g4s1_t4_replay",
+  "binary_sha256": "addce9d253b67f18944d558894e0d2e3273a9bd8de5c78f969bbc6bc5e763a66",
+  "build_driver": "580.82.07",
+  "build_nvcc": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Fri_Feb_21_20:23:50_PST_2025\nCuda compilation tools, release 12.8, V12.8.93\nBuild cuda_12.8.r12.8/compiler.35583870_0",
+  "campaign": "dynamic_exact_rational_vs_fp16",
+  "compute_capability": "7.5",
+  "config_provenance": {
+    "ambiguous_exact_identity_class_shapes": 200,
+    "ambiguous_fp_identity_class_shapes": 240,
+    "derived_packed_exact_shapes": 43,
+    "preserved_exact_full_config_shapes": 781,
+    "preserved_fp_full_config_shapes": 784,
+    "recovered_exact_identity_class_options": 2000,
+    "recovered_exact_identity_class_shapes": 200,
+    "recovered_fp_identity_class_options": 3484,
+    "recovered_fp_identity_class_shapes": 240,
+    "timing_based_historical_guesses": 0
+  },
+  "floating_replay_method": "cublaslt-heuristic-object-filtered-by-frozen-identity",
+  "frozen_certified_exact_wins": 870,
+  "frozen_cuda_source_sha256": "00426407494b3184dc1b063842d93ac3ff7e04c7b37f5d7cb2feea7d860bc011",
+  "hardware": "Tesla T4",
+  "modes": {
+    "full": 1024,
+    "quick": 24,
+    "standard": 128
+  },
+  "note": "Replay-only runtime. The packaged payload decodes byte-for-byte to the physically validated Tesla T4 replay binary identified by binary_sha256. Archived full configs are used exactly when preserved. Where the frozen ledger retained only a winner identity, every frozen physical config matching that identity is embedded and runtime selection occurs only inside that identity class before paired measurement. No omitted historical field is guessed.",
+  "payload_format": "base64+gzip",
+  "payload_name": "g4s1_t4_replay.gz.b64",
+  "payload_sha256": "0badb45718371287e6da97c1840426c99f331949f8e75a09bd4d0b8f6b204da6",
+  "privacy_scan_passed": true,
+  "private_identity_class_manifest_sha256": "48e8b4c6b10a3f1321ca955bb49e977966c1dddfe0eb84b0f8a73e0dac092d1c",
+  "private_material_included": false,
+  "public_runtime_source_sha256": "8e21ccbbbefa5f046f440fb5af55bafc2bb5a6c08488f4d356b3c44e7edfabd0",
+  "schema": "RNS-ENGINE-G4S1-T4-RUNTIME-3",
+  "series": 1,
+  "shape_count": 1024,
+  "source_archive_sha256": "b9f97f8e5d45956cc431665b0fbf7b990b1ef18b78b7c1859f1d827cd8d73dda"
+}
