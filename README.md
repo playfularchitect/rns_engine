@@ -70,7 +70,7 @@ Current Series 1 fast-path contract:
 
 The reusable caller-supplied execution path was physically certified on **1,024 / 1,024 supported shapes** with full-range signed-INT8 data. Additional extreme-value and sparse-extreme tests also passed.
 
-The package SHA-pins the stripped public execution-source bodies, shape manifest, certification receipt, compile flags, and provenance hashes. Private G4 search, learning, grammar, and optimizer code is not included.
+The package SHA-pins the stripped public execution-source bodies, shape manifest, certification receipt, compile flags, and provenance hashes.
 
 **FP32-class G4 Series 2 support is in development and is intended to extend this same `g4_matmul()` API after physical certification.**
 
@@ -148,16 +148,9 @@ For rational GEMM, headline G4OPS uses the **end-to-end exact-result timing boun
 
 ## What is G4?
 
-G4 is the privately developed autonomous optimization and research system that discovered the benchmarked implementations.
+G4 is the privately developed autonomous optimization/research system that discovered the benchmarked implementations.
 
-`rns_engine` exposes:
-
-- frozen G4 Series 1 integer and rational evidence;
-- reproducible Tesla T4 replay benchmarks;
-- the certified Series 1 `g4_matmul()` execution library;
-- lower-level exact RNS and reference arithmetic tools used by the project.
-
-The public repository does **not** contain the private G4 search engine, autonomous learner, grammar-generation system, or optimizer controller.
+`rns_engine` exposes the frozen evidence, reproducible replay paths, the certified Series 1 execution library, and lower-level exact arithmetic tools used by the project.
 
 ---
 
