@@ -14,6 +14,7 @@
       "certified_speedup_geometric_mean": 1.417436071329068,
       "certified_speedup_median": 1.4064410325,
       "compute_capability": "7.5",
+      "errors": 3,
       "evaluated_shapes": 1024,
       "final_unresolved_decisions": {
         "ERROR": 3,
@@ -21,8 +22,10 @@
         "STATISTICAL_TIE": 41
       },
       "hardware": "Tesla T4",
+      "nvidia_wins": 110,
       "remaining_unresolved": 154,
       "slowest_certified_speedup": 1.004344702,
+      "statistical_ties": 41,
       "target_shapes": 1024
     },
     "integer_fp16_input_clean_sweep": {
@@ -31,6 +34,7 @@
       "best_exact_win_speedup": 2.64706111,
       "compute_capability": "7.5",
       "declared_shapes": 1024,
+      "errors": 0,
       "exact_win_rate": 0.916015625,
       "exact_win_speedup_geometric_mean": 1.311051665330303,
       "exact_win_speedup_median": 1.289234996,
@@ -38,6 +42,9 @@
       "floating_baseline": "NVIDIA FP16-input cuBLASLt configuration landscape; accumulation mode may be FP16 or FP32 per retained configuration",
       "floating_wins": 86,
       "hardware": "Tesla T4",
+      "nvidia_win_g4_execution_time_penalty_from_geomean": 0.5480858262741786,
+      "nvidia_win_g4_throughput_retained_geometric_mean": 0.6459590179226226,
+      "nvidia_win_loss_metric_derivation": "Derived exactly from the frozen all-shape geometric mean, frozen G4-win geometric mean, and the 938 G4 wins + 86 NVIDIA wins = 1024 shapes with no ties/errors.",
       "overall_speedup_geometric_mean": 1.235383405277301,
       "overall_speedup_median": 1.256704092,
       "paired_block_counts": {
@@ -45,6 +52,7 @@
         "21": 827,
         "31": 190
       },
+      "statistical_ties": 0,
       "suite_id": "T4GL-1024-v1"
     }
   },
