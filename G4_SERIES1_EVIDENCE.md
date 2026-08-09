@@ -106,6 +106,18 @@ Each final row records the same post-measurement bookkeeping exception: `KeyErro
 
 **Do not conflate the two percentages.** `938/1024` is the frozen exact-integer clean-sweep result. `870/1024` is the separately certified dynamic exact-rational result.
 
+## Benchmark timing boundary vs user-API wall time
+
+The frozen **integer** headline is a resident-data GEMM kernel benchmark: GPU data movement, Python-call overhead, and one-shot CPU-array wrapper/runtime work are outside that timing boundary.
+
+The frozen **rational** benchmark has its own documented exact-result timing boundary and includes the rational metadata/bookkeeping required to produce the exact rational result. It still is not a one-shot CPU-NumPy `g4_matmul()` wall-time claim.
+
+The public `g4_matmul()` API has a different boundary. It accepts CPU NumPy arrays (or `SharedScaleMatrix` objects backed by CPU arrays) and returns a CPU NumPy-backed result. End-to-end `g4_matmul()` wall time therefore includes data movement and wrapper/runtime work that the resident-data integer benchmark excludes.
+
+A benchmark that times PyTorch only after tensors are already resident on the GPU must be compared against the same resident-data boundary on the G4 side. Comparing that PyTorch kernel time directly with CPU→CPU `g4_matmul()` wall time mixes two different measurements.
+
+Series 1 does **not** claim that one-shot CPU-NumPy→CPU-NumPy `g4_matmul()` wall time beats a pre-resident PyTorch GPU GEMM call.
+
 ## Python API
 
 ```python
