@@ -63,21 +63,34 @@ def _runtime_metadata() -> dict:
 
 
 def _load_runtime_bytes(meta: dict) -> bytes:
-    payload_name = meta["payload_name"]
-    try:
-        payload_text = _data_file(payload_name).read_text(encoding="ascii")
-    except FileNotFoundError as exc:
-        raise RuntimeError(f"G4 replay payload is missing: {payload_name}") from exc
-    payload_bytes = payload_text.encode("ascii")
+    part_names = meta.get("payload_parts")
+    part_hashes = meta.get("payload_part_sha256", {})
+    if not isinstance(part_names, list) or not part_names:
+        raise RuntimeError("G4 replay payload-part manifest is missing")
+    parts = []
+    for part_name in part_names:
+        try:
+            part = _data_file(part_name).read_bytes()
+        except FileNotFoundError as exc:
+            raise RuntimeError(f"G4 replay payload part is missing: {part_name}") from exc
+        expected_part_sha = part_hashes.get(part_name)
+        actual_part_sha = _sha256_bytes(part)
+        if actual_part_sha != expected_part_sha:
+            raise RuntimeError(
+                f"G4 replay payload part failed integrity check: {part_name}; "
+                f"expected {expected_part_sha}, got {actual_part_sha}"
+            )
+        parts.append(part)
+    payload_bytes = b"".join(parts)
     actual_payload_sha = _sha256_bytes(payload_bytes)
     expected_payload_sha = meta["payload_sha256"]
     if actual_payload_sha != expected_payload_sha:
         raise RuntimeError(
-            "G4 replay payload integrity check failed: "
+            "G4 replay payload integrity check failed after reassembly: "
             f"expected {expected_payload_sha}, got {actual_payload_sha}"
         )
     try:
-        compressed = base64.b64decode(payload_text, validate=False)
+        compressed = base64.b64decode(payload_bytes, validate=False)
         binary = gzip.decompress(compressed)
     except Exception as exc:
         raise RuntimeError("G4 replay payload could not be decoded") from exc
