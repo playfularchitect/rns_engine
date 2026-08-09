@@ -214,7 +214,6 @@ g4_matmul
 
 ## Scope and limitations
 
-The public claims are intentionally narrow and reproducible:
 
 - **G4 Series 1 is frozen to Tesla T4 / compute capability 7.5.** Results on another GPU are a different experiment.
 - The benchmark catalog contains the declared **1,024 GEMM shapes**, not every possible matrix size.
