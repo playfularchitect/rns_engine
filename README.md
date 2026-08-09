@@ -4,12 +4,27 @@
 
 G4 Series 1 contains two separate exact GEMM systems tested **directly against NVIDIA's optimized cuBLASLt FP16-input GEMM implementation** on the same class of NVIDIA Tesla T4 GPU across **1,024 matrix-multiplication shapes**.
 
-| Exact arithmetic tested | Faster than NVIDIA | Win rate |
-|---|---:|---:|
-| **G4 exact integer GEMM** | **938 / 1,024 shapes** | **91.60%** |
-| **G4 exact rational GEMM** | **870 / 1,024 shapes** | **84.96%** |
+## Frozen Series 1 scorecard
+
+Speedup ratios below are **NVIDIA time / G4 time**, so `>1.0x` means G4 is faster.
+
+| Exact arithmetic tested | G4 wins | NVIDIA wins | Ties | Errors | Overall geomean | Overall median |
+|---|---:|---:|---:|---:|---:|---:|
+| **G4 exact integer GEMM** | **938 / 1,024 (91.60%)** | 86 | 0 | 0 | **1.235x** | **1.257x** |
+| **G4 exact rational GEMM** | **870 / 1,024 (84.96%)** | 110 | 41 | 3 | — | — |
 
 These are **two separate benchmark results**. Integer and rational systems are run, certified, and scored independently.
+
+The integer aggregate covers **all 1,024 frozen shapes**, including the 86 shapes where NVIDIA is faster. The frozen rational public summary does **not** claim an all-1,024 speedup aggregate, so none is invented here.
+
+| Win magnitude | Geomean when G4 wins | Median when G4 wins | Best G4 win |
+|---|---:|---:|---:|
+| **Exact integer** | **1.311x** | **1.289x** | **2.647x** |
+| **Exact rational** | **1.417x** | **1.406x** | **2.978x** |
+
+For the **86 integer shapes where NVIDIA wins**, G4 retains **64.60% of NVIDIA throughput on geometric average**, equivalent to G4 taking **54.81% longer** on those losses. That loss-side figure is reported deliberately rather than hidden. It is exactly derivable from the frozen all-shape geomean, G4-win geomean, and the 938/86 split with no ties or errors.
+
+For rational GEMM, the 1.417x geomean and 1.406x median describe the **870 certified G4-winning shapes only**. Of the remaining 154 shapes, the frozen campaign classified **110 as NVIDIA wins, 41 as statistical ties, and 3 as errors**.
 
 > **Exact** describes correctness. **Win** describes speed. A calculation remains mathematically exact even on a shape where NVIDIA wins the timing comparison.
 
@@ -72,8 +87,6 @@ The reusable caller-supplied execution path was physically certified on **1,024 
 
 The package SHA-pins the stripped public execution-source bodies, shape manifest, certification receipt, compile flags, and provenance hashes.
 
-**FP32-class G4 Series 2 support is in development and is intended to extend this same `g4_matmul()` API after physical certification.**
-
 ---
 
 ## Reproduce the benchmarks
@@ -87,6 +100,8 @@ rns.g4_results()
 rns.g4_results("integer")
 rns.g4_results("rational")
 ```
+
+`g4_results()` prints the full frozen scorecard, including aggregate integer performance, win-side magnitude, integer loss-side magnitude, and the rational win/NVIDIA-win/tie/error breakdown.
 
 On a Tesla T4 there are three benchmark entry points:
 
@@ -114,6 +129,16 @@ full     1,024 shapes
 The public runners report exactness, speed wins/losses/ties, XOPS/G4OPS, reproducibility, runtime/source provenance hashes, all-result-row hashes, and cryptographic run receipts.
 
 The benchmark paths are replay-only: they rerun frozen Series 1 implementations rather than performing a new G4 search.
+
+### Certification and timing evidence
+
+The public replay uses paired physical timings on the same T4, exactness gates, and cryptographic run receipts.
+
+For the current integer public replay, winner classification uses **31 paired timing blocks per shape**, **20,000 bootstrap resamples**, a **95% confidence interval**, a **1.002 promotion threshold**, and at least **20 / 31 winning blocks**. Runtime or exactness failures fail closed.
+
+The historical frozen integer archive predates that uniform public replay rule and preserves its actual measurement depth: **827 shapes used 21 paired blocks, 190 used 31, and 7 used 127**. Exact replay passed before and after timing on all 1,024 frozen integer shapes.
+
+Every certified rational winner used **31 paired timing blocks** and passed the non-integer-input, signed-range, and FP16-value-set proof gates.
 
 See [`G4_SERIES1_EVIDENCE.md`](G4_SERIES1_EVIDENCE.md) for the benchmark protocol, claim boundaries, and replay provenance.
 
@@ -214,7 +239,6 @@ g4_matmul
 
 ## Scope and limitations
 
-
 - **G4 Series 1 is frozen to Tesla T4 / compute capability 7.5.** Results on another GPU are a different experiment.
 - The benchmark catalog contains the declared **1,024 GEMM shapes**, not every possible matrix size.
 - The current G4 Series 1 user-math fast path accepts signed-INT8 integer matrices or shared-scale rational matrices with signed-INT8 numerators.
@@ -222,19 +246,25 @@ g4_matmul
 - Shared-scale rational outputs are exact; Series 1 does not claim arbitrary per-element denominator support.
 - Unsupported G4 shapes or representations fail closed rather than silently falling back to approximate floating point.
 - Integer and rational benchmark scores are always reported separately.
-- FP32-class G4 Series 2 is not part of Series 1 and is not claimed as shipped.
+- Future G4 generations are treated as separate Series rather than rewriting frozen Series 1 evidence.
 
 ---
 
 ## Evidence and integrity
 
-The public Series 1 runtime and replay paths are integrity checked with SHA-256. Public benchmark runs include exactness gates and cryptographic receipts so fresh timing evidence can be distinguished from the frozen historical headline results.
+The public Series 1 runtime and replay paths are integrity checked with SHA-256. Public benchmark runs include exactness gates and cryptographic receipts so fresh timing evidence can be distinguished from the frozen historical results.
 
-Frozen headline results remain:
+Frozen headline scorecard:
 
 ```text
-G4 exact integers  vs NVIDIA FP16: 938 / 1024 faster (91.60%)
-G4 exact rationals vs NVIDIA FP16: 870 / 1024 faster (84.96%)
+G4 exact integers  vs NVIDIA FP16: 938 G4 wins / 86 NVIDIA wins / 0 ties / 0 errors
+  all 1024: 1.235x geomean | 1.257x median
+  G4 wins: 1.311x geomean | 1.289x median | 2.647x best
+  NVIDIA wins: G4 retains 64.60% throughput on geometric average
+
+G4 exact rationals vs NVIDIA FP16: 870 G4 wins / 110 NVIDIA wins / 41 ties / 3 errors
+  certified G4 wins: 1.417x geomean | 1.406x median | 2.978x best
+  no all-1024 rational speedup aggregate is claimed by the frozen public summary
 ```
 
 Timing classifications can move between fresh runs because clocks, thermals, driver state, and measurement noise move. Mathematical exactness must not.
