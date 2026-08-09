@@ -1,7 +1,11 @@
 """Public, frozen G4 Series 1 benchmark evidence."""
 from __future__ import annotations
 
+import base64
 import csv
+import gzip
+import hashlib
+import io
 import json
 from copy import deepcopy
 from importlib import resources
@@ -11,6 +15,7 @@ import sys
 _SUMMARY = "g4s1_public_summary.json"
 _INTEGER_ROWS = "g4s1_integer_fp16_input_results.csv"
 _RATIONAL_ROWS = "g4s1_dynamic_exact_rational_results.csv"
+_LEDGER_PACKAGING = "g4s1_ledger_packaging.json"
 
 _BOOL_FIELDS = {"certified_exact_win", "actual_noninteger_inputs", "range_proved", "fp16_value_set_proved", "exact_replay_pre", "exact_replay_post"}
 _INT_FIELDS = {"m", "n", "k", "exact_block_wins", "paired_blocks"}
@@ -52,8 +57,22 @@ def _coerce_row(row: dict[str, str]) -> dict:
 
 def _load_rows(name: str) -> list[dict]:
     filename = _INTEGER_ROWS if name == "integer_fp16_input_clean_sweep" else _RATIONAL_ROWS
-    with _data_file(filename).open("r", encoding="utf-8", newline="") as handle:
-        return [_coerce_row(row) for row in csv.DictReader(handle)]
+    with _data_file(_LEDGER_PACKAGING).open("r", encoding="utf-8") as handle:
+        packaging = json.load(handle)
+    if packaging.get("schema") != "RNS-ENGINE-G4S1-LEDGER-PACKAGING-1":
+        raise RuntimeError("unrecognized G4 Series 1 ledger packaging schema")
+    entry = packaging["ledgers"][filename]
+    payload = _data_file(entry["packaged_name"]).read_bytes()
+    if hashlib.sha256(payload).hexdigest() != entry["packaged_sha256"]:
+        raise RuntimeError(f"packaged G4 ledger failed integrity check: {filename}")
+    try:
+        raw = gzip.decompress(base64.b64decode(payload))
+    except Exception as exc:
+        raise RuntimeError(f"packaged G4 ledger could not be decoded: {filename}") from exc
+    if hashlib.sha256(raw).hexdigest() != entry["raw_sha256"]:
+        raise RuntimeError(f"decoded G4 ledger failed frozen hash check: {filename}")
+    text = raw.decode("utf-8")
+    return [_coerce_row(row) for row in csv.DictReader(io.StringIO(text))]
 
 
 def _pct(value: float) -> str:
