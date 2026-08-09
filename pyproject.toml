@@ -55,9 +55,8 @@ include = ["rns_engine", "rns_engine.*"]
 [tool.setuptools.package-data]
 rns_engine = [
   "data/*.json",
-  "data/*.csv",
   "data/G4S1_SHA256SUMS",
-  "data/g4s1_t4_replay.gz.b64",
+  "data/*.b64",
 ]
 
 [tool.cibuildwheel]
