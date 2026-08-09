@@ -172,9 +172,9 @@ The frozen rational headline remains **870 / 1,024 = 84.96%**.
 
 ## What is G4?
 
-G4 is the autonomous optimization/research system that discovered the benchmarked implementations.
+G4 is the privately developed autonomous optimization/research system that discovered the benchmarked implementations.
 
-`rns_engine` exposes the frozen evidence, reproducible replay paths, and the certified Series 1 execution library. The public package contains only stripped execution-source bodies and their provenance/certification data; the private G4 search, candidate-generation, grammar, learner, and optimization machinery is not shipped.
+`rns_engine` exposes the frozen evidence, reproducible replay paths, and the certified Series 1 execution library. 
 
 ---
 
