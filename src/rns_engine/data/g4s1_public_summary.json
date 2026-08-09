@@ -1,0 +1,87 @@
+{
+  "campaigns": {
+    "dynamic_exact_rational": {
+      "all_certified_actual_noninteger_inputs": true,
+      "all_certified_fp16_value_set_proved": true,
+      "all_certified_range_proved": true,
+      "attempt_count": 1403,
+      "attempt_errors": 9,
+      "best_certified_speedup": 2.978048086,
+      "campaign": "G416 dynamic arbitrary shared-descriptor rational versus FP16",
+      "certified_exact_win_rate": 0.849609375,
+      "certified_exact_wins": 870,
+      "certified_measurement_blocks": 31,
+      "certified_speedup_geometric_mean": 1.417436071329068,
+      "certified_speedup_median": 1.4064410325,
+      "compute_capability": "7.5",
+      "evaluated_shapes": 1024,
+      "final_unresolved_decisions": {
+        "ERROR": 3,
+        "FLOATING_WIN": 110,
+        "STATISTICAL_TIE": 41
+      },
+      "hardware": "Tesla T4",
+      "remaining_unresolved": 154,
+      "slowest_certified_speedup": 1.004344702,
+      "target_shapes": 1024
+    },
+    "integer_fp16_input_clean_sweep": {
+      "all_shapes_exact_replay_pre_and_post": true,
+      "benchmark_scope": "resident-data GEMM kernel benchmark",
+      "best_exact_win_speedup": 2.64706111,
+      "compute_capability": "7.5",
+      "declared_shapes": 1024,
+      "exact_win_rate": 0.916015625,
+      "exact_win_speedup_geometric_mean": 1.311051665330303,
+      "exact_win_speedup_median": 1.289234996,
+      "exact_wins": 938,
+      "floating_baseline": "NVIDIA FP16-input cuBLASLt configuration landscape; accumulation mode may be FP16 or FP32 per retained configuration",
+      "floating_wins": 86,
+      "hardware": "Tesla T4",
+      "overall_speedup_geometric_mean": 1.235383405277301,
+      "overall_speedup_median": 1.256704092,
+      "paired_block_counts": {
+        "127": 7,
+        "21": 827,
+        "31": 190
+      },
+      "suite_id": "T4GL-1024-v1"
+    }
+  },
+  "claims": {
+    "dynamic_exact_rational": {
+      "denominator": 1024,
+      "label": "certified exact-rational wins in frozen G416 dynamic shared-descriptor campaign versus FP16",
+      "numerator": 870,
+      "rate": 0.849609375,
+      "warning": "This is the dynamic exact-rational count; do not relabel the 938/1024 integer clean-sweep figure as rational coverage."
+    },
+    "integer_fp16_input_clean_sweep": {
+      "denominator": 1024,
+      "label": "exact integer wins in frozen T4GL-1024 FP16-input cuBLASLt landscape",
+      "numerator": 938,
+      "rate": 0.916015625,
+      "warning": "This is exact-integer coverage, not the dynamic exact-rational certified-win count."
+    }
+  },
+  "freeze_status": "FINAL_ARCHIVE_DO_NOT_MODIFY",
+  "privacy_boundary": {
+    "contains_compiled_winner_binaries": false,
+    "contains_cuda_source": false,
+    "contains_g4_engine": false,
+    "contains_private_optimizer_representation": false,
+    "contains_private_search_or_learning_state": false,
+    "purpose": "sanitized frozen result evidence only"
+  },
+  "provenance": {
+    "clean_checkpoint_sha256": "645d439ca042a0c02072265f005e0778e0e5e320cf2f5a11f5a8f1cde814b1cd",
+    "clean_results_sha256": "5415bf02bd435d542f402f0c97ed74efca03b6e1c8ca99695c8a296d814936ca",
+    "dynamic_results_sha256": "5aa1b30b416af90d3673a4637ec23205fc6bbb415b8bf06388a9f63e09dbd93d",
+    "dynamic_summary_sha256": "8bd80c849f956311c8b8fa163a85e21940fea962cce876202274d16dfa96ef9f",
+    "nested_master_sha256": "f631fa23f133708ee9abf6991858136252ddbf505c06de61fc5fb6304189ddf3",
+    "source_archive_name": "G4s1 ARCHIVE FINAL.zip",
+    "source_archive_sha256": "b9f97f8e5d45956cc431665b0fbf7b990b1ef18b78b7c1859f1d827cd8d73dda"
+  },
+  "schema": "RNS-ENGINE-G4S1-PUBLIC-EVIDENCE-1",
+  "series": "G4 Series 1"
+}
