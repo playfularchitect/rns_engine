@@ -34,29 +34,31 @@ def _pct(value: float) -> str:
 
 
 def _print_integer(campaign: dict, stream: TextIO) -> None:
-    print("[Exact integer / NVIDIA FP16-input cuBLASLt]", file=stream)
+    print("=== G4 INTEGERS vs NVIDIA FP16 cuBLASLt ===", file=stream)
+    print("Frozen Series 1 integer test — separate from the rational test below.", file=stream)
     print(
-        f"Exact wins: {campaign['exact_wins']} / {campaign['declared_shapes']} "
+        f"G4 exact integers faster: {campaign['exact_wins']} / {campaign['declared_shapes']} "
         f"({_pct(campaign['exact_win_rate'])})",
         file=stream,
     )
-    print(f"NVIDIA wins: {campaign['floating_wins']}", file=stream)
-    print("Exact replay before + after timing: PASS on all 1,024 shapes", file=stream)
-    print(f"Median speedup among exact wins: {campaign['exact_win_speedup_median']:.3f}x", file=stream)
-    print(f"Best exact-win speedup: {campaign['best_exact_win_speedup']:.3f}x", file=stream)
+    print(f"NVIDIA FP16 faster: {campaign['floating_wins']} / {campaign['declared_shapes']}", file=stream)
+    print("Integer exactness: replay before + after timing PASS on all 1,024 shapes", file=stream)
+    print(f"Median integer speedup among G4 wins: {campaign['exact_win_speedup_median']:.3f}x", file=stream)
+    print(f"Best integer G4 speedup: {campaign['best_exact_win_speedup']:.3f}x", file=stream)
 
 
 def _print_rational(campaign: dict, stream: TextIO) -> None:
-    print("[Exact rational / NVIDIA FP16]", file=stream)
+    print("=== G4 RATIONALS vs NVIDIA FP16 cuBLASLt ===", file=stream)
+    print("Frozen Series 1 rational test — separate from the integer test above.", file=stream)
     print(
-        f"Certified exact wins: {campaign['certified_exact_wins']} / {campaign['target_shapes']} "
+        f"G4 exact rationals faster (certified): {campaign['certified_exact_wins']} / {campaign['target_shapes']} "
         f"({_pct(campaign['certified_exact_win_rate'])})",
         file=stream,
     )
-    print(f"Remaining unresolved at archive freeze: {campaign['remaining_unresolved']}", file=stream)
-    print("Certified winners: non-integer inputs PASS | range proof PASS | FP16 value-set proof PASS", file=stream)
-    print(f"Median certified speedup: {campaign['certified_speedup_median']:.3f}x", file=stream)
-    print(f"Best certified speedup: {campaign['best_certified_speedup']:.3f}x", file=stream)
+    print(f"Rational shapes unresolved at archive freeze: {campaign['remaining_unresolved']}", file=stream)
+    print("Certified rational winners: non-integer inputs PASS | range proof PASS | FP16 value-set proof PASS", file=stream)
+    print(f"Median rational speedup among certified G4 wins: {campaign['certified_speedup_median']:.3f}x", file=stream)
+    print(f"Best certified rational G4 speedup: {campaign['best_certified_speedup']:.3f}x", file=stream)
 
 
 def g4_results(
@@ -97,6 +99,7 @@ def g4_results(
     if display:
         out = stream if stream is not None else sys.stdout
         print("=== G4 SERIES 1 — TESLA T4 RESULTS ===", file=out)
+        print("Two separate tests are reported below. Do not combine their scores.", file=out)
         print(file=out)
         if selected in ("all", "integer_fp16_input_clean_sweep"):
             _print_integer(evidence["campaigns"]["integer_fp16_input_clean_sweep"], out)
@@ -106,7 +109,9 @@ def g4_results(
             _print_rational(evidence["campaigns"]["dynamic_exact_rational"], out)
         if selected == "all":
             print(file=out)
-            print("91.60% integer and 84.96% rational are separate benchmark results.", file=out)
+            print("INTEGER RESULT:  938 / 1024 = 91.60%", file=out)
+            print("RATIONAL RESULT: 870 / 1024 = 84.96%", file=out)
+            print("These are separate benchmark results against NVIDIA FP16 cuBLASLt.", file=out)
 
     return result
 
