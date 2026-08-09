@@ -28,12 +28,16 @@ def test_g4_results_keeps_integer_and_rational_claims_distinct():
     assert rational["all_certified_fp16_value_set_proved"] is True
 
 
-def test_g4_results_report_labels_both_percentages():
+def test_g4_results_report_labels_both_species_and_percentages():
     stream = io.StringIO()
     g4_results(stream=stream)
     text = stream.getvalue()
-    assert "938 / 1024 (91.60%)" in text
-    assert "870 / 1024 (84.96%)" in text
+    assert "G4 INTEGERS vs NVIDIA FP16 cuBLASLt" in text
+    assert "G4 RATIONALS vs NVIDIA FP16 cuBLASLt" in text
+    assert "G4 exact integers faster: 938 / 1024 (91.60%)" in text
+    assert "G4 exact rationals faster (certified): 870 / 1024 (84.96%)" in text
+    assert "INTEGER RESULT:  938 / 1024 = 91.60%" in text
+    assert "RATIONAL RESULT: 870 / 1024 = 84.96%" in text
     assert "separate benchmark results" in text
 
 
