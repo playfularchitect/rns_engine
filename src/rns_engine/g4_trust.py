@@ -134,6 +134,63 @@ def _build_cuda_summary(build_nvcc: str) -> str:
     return "unavailable"
 
 
+def _print_test_scope(stream: TextIO) -> None:
+    _box(
+        "G4 SERIES 1 - TWO SEPARATE TESTS",
+        [
+            "G4 INTEGERS  vs NVIDIA FP16 cuBLASLt: frozen result 938 / 1024 (91.60%)",
+            "G4 RATIONALS vs NVIDIA FP16 cuBLASLt: frozen result 870 / 1024 (84.96%)",
+            "",
+            "LIVE BENCHMARK BELOW: G4 RATIONALS vs NVIDIA FP16 ONLY.",
+            "g4_benchmark() does not rerun the integer benchmark; the integer score is context only.",
+        ],
+        stream,
+        width=112,
+    )
+
+
+def _add_species_labels(result: dict) -> None:
+    result["live_test"] = "G4_RATIONALS_vs_NVIDIA_FP16_cuBLASLt"
+    summary = result.setdefault("summary", {})
+    if "frozen_decision_matches" in summary:
+        summary["rational_frozen_decision_matches"] = summary["frozen_decision_matches"]
+
+
+def _print_rational_live_summary(result: dict, stream: TextIO) -> None:
+    summary = result.get("summary", {})
+    total = int(summary.get("shapes_run", len(result.get("rows", []))))
+    exact_failures = int(summary.get("exact_replay_failures", 0))
+    runtime_errors = int(summary.get("runtime_errors", 0))
+    exact_rows = max(0, total - exact_failures - runtime_errors)
+    g4_wins = int(summary.get("live_exact_wins", 0))
+    nvidia_wins = int(summary.get("live_floating_wins", 0))
+    ties = int(summary.get("live_statistical_ties", 0))
+    matches = int(
+        summary.get(
+            "rational_frozen_decision_matches",
+            summary.get("frozen_decision_matches", 0),
+        )
+    )
+
+    def pct(value: int) -> str:
+        return f"{value / total * 100:.2f}%" if total else "0.00%"
+
+    _box(
+        "G4 RATIONALS - FRESH RUN SUMMARY",
+        [
+            "Every number in this box refers to the RATIONAL benchmark only.",
+            f"G4 rational calculations correct: {exact_rows} / {total}",
+            f"G4 RATIONALS faster than NVIDIA FP16: {g4_wins} / {total} ({pct(g4_wins)})",
+            f"NVIDIA FP16 faster than G4 RATIONALS: {nvidia_wins} / {total} ({pct(nvidia_wins)})",
+            f"G4 RATIONALS / NVIDIA FP16 statistical ties: {ties} / {total} ({pct(ties)})",
+            f"RATIONAL winner/tie classification matches original rational benchmark: {matches} / {total} ({pct(matches)})",
+            "Frozen G4 INTEGER result was not rerun by this command.",
+        ],
+        stream,
+        width=112,
+    )
+
+
 def _make_trust_pack(
     result: dict,
     *,
@@ -154,6 +211,7 @@ def _make_trust_pack(
         "schema": _TRUST_SCHEMA,
         "series": result.get("series"),
         "campaign": result.get("campaign"),
+        "live_test": result.get("live_test", "G4_RATIONALS_vs_NVIDIA_FP16_cuBLASLt"),
         "mode": result.get("mode"),
         "started_utc": started_utc,
         "completed_utc": completed_utc,
@@ -172,7 +230,7 @@ def _make_trust_pack(
         "gpu_state_before": gpu_before,
         "gpu_state_after": gpu_after,
         "protocol": {
-            "comparison": "exact rational GEMM vs NVIDIA FP16 cuBLASLt",
+            "comparison": "G4 exact rational GEMM vs NVIDIA FP16 cuBLASLt",
             "paired_timing_blocks_per_shape": _BLOCKS,
             "bootstrap_resamples_per_shape": _BOOTSTRAP_REPETITIONS,
             "bootstrap_confidence_interval": 0.95,
@@ -213,8 +271,9 @@ def _print_trust_pack(trust: dict, stream: TextIO) -> None:
     environment = trust["environment"]
 
     _box(
-        "TRUST PACK - CRYPTOGRAPHIC RUN RECEIPT",
+        "TRUST PACK - G4 RATIONAL RUN RECEIPT",
         [
+            "Live test: G4 RATIONALS vs NVIDIA FP16 cuBLASLt",
             f"Environment: {environment['name']} | rns_engine {package['version']} | release {package['release_tag']}",
             f"Python: {environment['python']} | CUDA reported by NVIDIA: {environment['current_cuda_reported_by_nvidia_smi']}",
             f"GPU: {gpu.get('name', 'unknown')} | compute capability {gpu.get('compute_capability', 'unknown')} | driver {gpu.get('driver_version', 'unknown')}",
@@ -223,7 +282,7 @@ def _print_trust_pack(trust: dict, stream: TextIO) -> None:
             f"GPU state after:  {_format_gpu_state(trust['gpu_state_after'])}",
             "",
             f"Protocol: {protocol['paired_timing_blocks_per_shape']} paired timing blocks/shape | {protocol['bootstrap_resamples_per_shape']:,} bootstrap resamples/shape | 95% CI",
-            f"Exactness gate: {exactness['rows_exact']} / {exactness['rows_total']} exact | runtime errors {exactness['runtime_errors']} | exactness failures {exactness['exact_replay_failures']}",
+            f"Rational exactness gate: {exactness['rows_exact']} / {exactness['rows_total']} exact | runtime errors {exactness['runtime_errors']} | exactness failures {exactness['exact_replay_failures']}",
             "",
             f"Replay binary SHA-256:   {runtime['binary_sha256']}",
             f"Replay payload SHA-256:  {runtime['payload_sha256']}",
@@ -244,7 +303,7 @@ def g4_benchmark(
     display: bool = True,
     stream: TextIO | None = None,
 ) -> dict:
-    """Run the public G4 benchmark and append a cryptographic trust receipt."""
+    """Run the public rational G4 benchmark and append a cryptographic trust receipt."""
     out = stream if stream is not None else sys.stdout
     started_utc = _utc_now()
     environment = _environment_name()
@@ -252,7 +311,12 @@ def g4_benchmark(
     current_cuda = _current_cuda_version()
     gpu_before = _gpu_state_snapshot()
 
+    if display:
+        _print_test_scope(out)
+        print(file=out)
+
     result = _core_g4_benchmark(mode, display=display, stream=out)
+    _add_species_labels(result)
 
     gpu_after = _gpu_state_snapshot()
     completed_utc = _utc_now()
@@ -269,6 +333,8 @@ def g4_benchmark(
     result["trust_pack"] = trust
 
     if display:
+        print(file=out)
+        _print_rational_live_summary(result, out)
         print(file=out)
         _print_trust_pack(trust, out)
 
