@@ -8,6 +8,14 @@ G4 is a **general autonomous search and optimization system**. Give it a problem
 
 For speed, Series 1 compares its exact GEMM implementations against NVIDIA's optimized cuBLASLt FP16-input GEMM. **FP16 is the fast floating-point speed baseline; G4 is exactness-gated separately.** The benchmark asks whether exact arithmetic can compete with floating-point-class speed, not whether FP16 provides the same correctness guarantee.
 
+## What Series 1 was built to answer
+
+**Series 1 is a research and certification release, not a production-style deployment library or a drop-in PyTorch replacement. It had one performance goal: determine whether mathematically exact integer and shared-scale rational GEMM could compete with floating-point-class GPU throughput on Tesla T4 under declared exactness and timing boundaries.**
+
+The frozen scorecards are the answer to that question. Series 1 did **not** attempt to optimize the rest of a production stack. One-shot Python/NumPy wall time, persistent GPU contexts, framework integration, memory-pool and stream reuse, arbitrary-shape coverage, batching policy, and deployment ergonomics were outside the Series 1 objective.
+
+`g4_matmul()` is included so the certified computations can be called, checked, and replayed through a simple public API. Its one-shot CPU-NumPy wall time is **not** the quantity Series 1 was designed to optimize. A production-oriented execution layer would be a separate engineering task and a later release or Series, not part of the Series 1 claim.
+
 ## Series 1 at a glance
 
 | | Certified Series 1 contract |
@@ -264,6 +272,7 @@ g4_matmul
 
 ## Scope and limitations
 
+- **G4 Series 1 is a research/certification release, not a production deployment release or drop-in framework replacement.**
 - **G4 Series 1 is frozen to Tesla T4 / compute capability 7.5.** Results on another GPU are a different experiment.
 - The benchmark catalog contains the declared **1,024 GEMM shapes**, not every possible matrix size.
 - The Series 1 user-math fast path accepts signed-INT8 integer matrices or shared-scale rational matrices with signed-INT8 numerators.
@@ -272,6 +281,7 @@ g4_matmul
 - Series 1 does not claim arbitrary per-element rational denominators or general rational normalization.
 - Unsupported G4 shapes or representations fail closed rather than silently falling back to approximate floating point.
 - The frozen integer benchmark reports **resident-data GPU GEMM speed**; one-shot `g4_matmul()` CPU-array wall time is a different timing boundary.
+- Series 1 does not claim optimized end-to-end framework/application latency, persistent-context execution, or production deployment ergonomics.
 - Integer and rational benchmark scores are always reported separately.
 - Future G4 generations are treated as separate Series rather than rewriting frozen Series 1 evidence.
 
