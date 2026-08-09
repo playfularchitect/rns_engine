@@ -62,9 +62,19 @@ def _load_rows(name: str) -> list[dict]:
     if packaging.get("schema") != "RNS-ENGINE-G4S1-LEDGER-PACKAGING-1":
         raise RuntimeError("unrecognized G4 Series 1 ledger packaging schema")
     entry = packaging["ledgers"][filename]
-    payload = _data_file(entry["packaged_name"]).read_bytes()
+    part_names = entry.get("packaged_parts")
+    part_hashes = entry.get("packaged_part_sha256", {})
+    if not isinstance(part_names, list) or not part_names:
+        raise RuntimeError(f"packaged G4 ledger part manifest is missing: {filename}")
+    parts = []
+    for part_name in part_names:
+        part = _data_file(part_name).read_bytes()
+        if hashlib.sha256(part).hexdigest() != part_hashes.get(part_name):
+            raise RuntimeError(f"packaged G4 ledger part failed integrity check: {part_name}")
+        parts.append(part)
+    payload = b"".join(parts)
     if hashlib.sha256(payload).hexdigest() != entry["packaged_sha256"]:
-        raise RuntimeError(f"packaged G4 ledger failed integrity check: {filename}")
+        raise RuntimeError(f"packaged G4 ledger failed integrity check after reassembly: {filename}")
     try:
         raw = gzip.decompress(base64.b64decode(payload))
     except Exception as exc:
