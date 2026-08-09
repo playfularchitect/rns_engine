@@ -14,7 +14,6 @@ on:
         type: boolean
 
 jobs:
-  # ── 1. Run tests ──────────────────────────────────────────────────────────
   test:
     name: Test (${{ matrix.os }}, py${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
@@ -46,7 +45,6 @@ jobs:
       - name: Verify installed dependencies
         run: python -m pip check
 
-  # ── 2. Build wheels ───────────────────────────────────────────────────────
   build_wheels:
     name: Wheels (${{ matrix.os }})
     needs: test
@@ -103,7 +101,6 @@ jobs:
           name: wheels-${{ matrix.os }}
           path: wheelhouse/*.whl
 
-  # ── 3. Build source distribution ─────────────────────────────────────────
   build_sdist:
     name: Source distribution
     needs: test
@@ -140,12 +137,13 @@ jobs:
               raise SystemExit(f"expected one source archive, found {archives}")
 
           required = {
-              "CAPACITY_PLANNING.md",
-              "PRE_CUDA_READINESS.md",
-              "CUDA_PARALLEL_LANES.md",
-              "benchmarks/weighted_int32_baseline.py",
-              "colab/T4_EXACT_GEMM_BRINGUP.ipynb",
-              "tests/test_pre_cuda.py",
+              "G4_SERIES1_EVIDENCE.md",
+              "src/rns_engine/g4_public.py",
+              "src/rns_engine/g4_integer_benchmark.py",
+              "src/rns_engine/g4_matmul.py",
+              "src/rns_engine/g4_runtime.py",
+              "src/rns_engine/g4_xops.py",
+              "src/rns_engine/data/g4s1_public_t4_runtime.json",
           }
           with tarfile.open(archives[0], "r:gz") as archive:
               members = set()
@@ -156,24 +154,44 @@ jobs:
 
           missing = sorted(required - members)
           if missing:
-              raise SystemExit(f"source archive is missing required assets: {missing}")
-          print("source archive contains every readiness asset")
+              raise SystemExit(f"source archive is missing required G4 assets: {missing}")
+          print("source archive contains every required public G4 asset")
           PY
 
-      - name: Install source distribution and run readiness gate
+      - name: Install source distribution and verify public G4 surface
         shell: bash
         run: |
           python -m pip install --force-reinstall --no-deps dist/*.tar.gz
-          rns-pre-cuda --report /tmp/readiness.json --fixture /tmp/t4_fixture.json
-          test -s /tmp/readiness.json
-          test -s /tmp/t4_fixture.json
+          python - <<'PY'
+          import rns_engine as rns
+          from rns_engine.g4_runtime import runtime_metadata
+
+          for name in (
+              "g4_results",
+              "g4_benchmark",
+              "g4_integer_benchmark",
+              "g4_rational_benchmark",
+              "g4_matmul",
+          ):
+              if not callable(getattr(rns, name, None)):
+                  raise SystemExit(f"missing public G4 API: {name}")
+
+          meta = runtime_metadata()
+          if meta.get("hardware") != "Tesla T4":
+              raise SystemExit("unexpected public G4 hardware contract")
+          if meta.get("compute_capability") != "7.5":
+              raise SystemExit("unexpected public G4 compute-capability contract")
+          if meta.get("modes", {}).get("full") != 1024:
+              raise SystemExit("unexpected public G4 full-shape count")
+
+          print("installed source distribution exposes the certified public G4 surface")
+          PY
 
       - uses: actions/upload-artifact@v4
         with:
           name: sdist
           path: dist/*.tar.gz
 
-  # ── 4. Publish an intentional release ─────────────────────────────────────
   publish:
     name: Publish to PyPI
     needs: [build_wheels, build_sdist]
