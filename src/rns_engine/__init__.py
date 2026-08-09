@@ -68,13 +68,6 @@ from .coefficients import (
     GroupedCoefficientCapacityPlan,
     plan_grouped_coefficient_capacity,
 )
-from .rail_planning import (
-    MersenneRailCandidate,
-    MersenneRailSearchResult,
-    MersenneRailSetPlan,
-    search_mersenne_rail_sets,
-    search_mersenne_rails_for_capacity,
-)
 from .wide import (
     BALANCED_EXTRA_EXPONENTS,
     BASE_MODULI,
@@ -94,26 +87,6 @@ from .exact_gemm import (
     grouped_plane_gemm,
     reconstruct_grouped_partials,
     reconstruct_signed_radix,
-)
-from .cuda_contract import (
-    BackendVerification,
-    CpuExactPipelineBackend,
-    CpuGroupedPartialsBackend,
-    CudaGemmFixture,
-    ExactPipelineBackend,
-    build_cuda_gemm_fixture,
-    verify_backend,
-)
-from .lane_plan import (
-    ParallelRailPrior,
-    RailLearningLane,
-    build_parallel_rail_prior,
-)
-from .pre_cuda import (
-    PreCudaReadinessReport,
-    build_default_pre_cuda_fixture,
-    default_pre_cuda_matrices,
-    run_pre_cuda_readiness,
 )
 from .g4_results import g4_results
 from .g4_public import g4_benchmark, g4_integer_benchmark, g4_rational_benchmark
@@ -149,8 +122,6 @@ __all__ = [
     "GroupedCoefficientCapacityPlan",
     "plan_signed_capacity", "plan_weighted_sum_capacity",
     "plan_digit_plane_gemm_capacity", "plan_grouped_coefficient_capacity",
-    "MersenneRailCandidate", "MersenneRailSetPlan", "MersenneRailSearchResult",
-    "search_mersenne_rail_sets", "search_mersenne_rails_for_capacity",
     "BASE_MODULI", "SMALLEST_PRODUCT_EXTRA_EXPONENTS",
     "BALANCED_EXTRA_EXPONENTS", "WideRNSConfig", "WideWeightedResult",
     "mersenne_modulus", "moduli_from_mersenne_exponents",
@@ -159,12 +130,6 @@ __all__ = [
     "exact_integer_matmul", "decompose_signed_radix",
     "reconstruct_signed_radix", "grouped_plane_gemm",
     "reconstruct_grouped_partials", "exact_shared_scale_gemm",
-    "CudaGemmFixture", "BackendVerification", "ExactPipelineBackend",
-    "CpuExactPipelineBackend", "CpuGroupedPartialsBackend",
-    "build_cuda_gemm_fixture", "verify_backend",
-    "RailLearningLane", "ParallelRailPrior", "build_parallel_rail_prior",
-    "PreCudaReadinessReport", "default_pre_cuda_matrices",
-    "build_default_pre_cuda_fixture", "run_pre_cuda_readiness",
     "g4_results", "g4_benchmark", "g4_integer_benchmark", "g4_rational_benchmark", "g4_matmul",
     "info",
 ]
