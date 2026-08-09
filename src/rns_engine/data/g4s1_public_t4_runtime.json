@@ -3,6 +3,7 @@
   "build_nvcc": "Cuda compilation tools, release 12.8, V12.8.93",
   "certification_member": "g4s1_certification.json",
   "certified_integer_replay_bundle_sha256": "bee490cd5772e7fe2f222361febf18457ffd3aeec071ba3f0def8542d0c9bfc6",
+  "integer_replay_bundle_sha256": "bee490cd5772e7fe2f222361febf18457ffd3aeec071ba3f0def8542d0c9bfc6",
   "certified_matmul_bundle_sha256": "0e0065f53f0f4809d4e9ec67a780af8a2b7fe8923ad057a77df60133ec17afe2",
   "certified_runtime_zip_sha256": "af48bf21252f439bf97251d9411e6833b6f176790f7e0e6905f2a68f3ed2d221",
   "compile": {
