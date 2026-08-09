@@ -4,31 +4,17 @@
 
 G4 Series 1 contains two separate exact GEMM systems tested **directly against NVIDIA's optimized cuBLASLt FP16-input GEMM implementation** on the same class of NVIDIA Tesla T4 GPU across **1,024 matrix-multiplication shapes**.
 
-## Frozen Series 1 scorecard
+## Frozen integer scorecard
 
-Speedup ratios below are **NVIDIA time / G4 time**, so `>1.0x` means G4 is faster.
+| Metric | Result |
+|---|---:|
+| **Record** | **938 wins / 86 losses / 0 ties / 0 errors** |
+| **All-shape geomean** | **1.235x** |
+| **All-shape median** | **1.257x** |
+| **Win-only geomean** | **1.311x** |
+| **Loss-side throughput** | **64.60%** |
 
-| Exact arithmetic tested | G4 wins | NVIDIA wins | Ties | Errors | Overall geomean | Overall median |
-|---|---:|---:|---:|---:|---:|---:|
-| **G4 exact integer GEMM** | **938 / 1,024 (91.60%)** | 86 | 0 | 0 | **1.235x** | **1.257x** |
-| **G4 exact rational GEMM** | **870 / 1,024 (84.96%)** | 110 | 41 | 3 | — | — |
-
-These are **two separate benchmark results**. Integer and rational systems are run, certified, and scored independently.
-
-The integer aggregate covers **all 1,024 frozen shapes**, including the 86 shapes where NVIDIA is faster. The frozen rational public summary does **not** claim an all-1,024 speedup aggregate, so none is invented here.
-
-| Win magnitude | Geomean when G4 wins | Median when G4 wins | Best G4 win |
-|---|---:|---:|---:|
-| **Exact integer** | **1.311x** | **1.289x** | **2.647x** |
-| **Exact rational** | **1.417x** | **1.406x** | **2.978x** |
-
-For the **86 integer shapes where NVIDIA wins**, G4 retains **64.60% of NVIDIA throughput on geometric average**, equivalent to G4 taking **54.81% longer** on those losses. That loss-side figure is reported deliberately rather than hidden. It is exactly derivable from the frozen all-shape geomean, G4-win geomean, and the 938/86 split with no ties or errors.
-
-For rational GEMM, the 1.417x geomean and 1.406x median describe the **870 certified G4-winning shapes only**. Of the remaining 154 shapes, the frozen campaign classified **110 as NVIDIA wins, 41 as statistical ties, and 3 as errors**.
-
-> **Exact** describes correctness. **Win** describes speed. A calculation remains mathematically exact even on a shape where NVIDIA wins the timing comparison.
-
-The tests use standard Tesla T4 hardware available through Google Colab. G4 Series 1 is frozen to the Tesla T4 / compute capability 7.5 contract.
+Speedup = NVIDIA time / G4 time.
 
 ---
 
