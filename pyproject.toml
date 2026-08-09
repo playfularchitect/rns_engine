@@ -55,7 +55,6 @@ include = ["rns_engine", "rns_engine.*"]
 [tool.setuptools.package-data]
 rns_engine = [
   "data/*.json",
-  "data/G4S1_SHA256SUMS",
   "data/*.b64",
 ]
 
