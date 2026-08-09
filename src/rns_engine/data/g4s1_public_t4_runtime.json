@@ -1,78 +1,60 @@
 {
   "build_driver": "580.82.07",
-  "build_nvcc": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2025 NVIDIA Corporation\nBuilt on Fri_Feb_21_20:23:50_PST_2025\nCuda compilation tools, release 12.8, V12.8.93\nBuild cuda_12.8.r12.8/compiler.35583870_0",
-  "certification": {
-    "certified_runtime_zip_sha256": "af48bf21252f439bf97251d9411e6833b6f176790f7e0e6905f2a68f3ed2d221",
-    "full_validation_report_sha256": "6c1229e501ac34fbbe61425e2b78c6fd7cb8ff0b26685d87ecf1ab97b906ea56",
-    "g4_matmul": {
-      "all_1024_random_full_signed_int8": "PASS",
-      "fail_fast_smoke": {
-        "checks": [
-          {"detail": "", "pattern": "random_abs_le_3", "status": "PASS"},
-          {"detail": "", "pattern": "random_abs_le_7", "status": "PASS"},
-          {"detail": "", "pattern": "random_abs_le_15", "status": "PASS"},
-          {"detail": "", "pattern": "random_abs_le_31", "status": "PASS"},
-          {"detail": "", "pattern": "random_abs_le_63", "status": "PASS"},
-          {"detail": "", "pattern": "random_abs_le_127", "status": "PASS"},
-          {"detail": "", "pattern": "random_full_signed_int8", "status": "PASS"},
-          {"detail": "", "pattern": "alternating_127_neg128", "status": "PASS"}
-        ],
-        "family": "generic",
-        "shape_id": "T4GL0037"
-      },
-      "quick_24_extreme_values": "PASS",
-      "standard_128_sparse_extremes": "PASS"
-    },
-    "integer_benchmark": {
-      "full": {"exact_replay_correct": 1024, "frozen_decision_matches": 953, "live_exact_wins": 874, "live_floating_wins": 112, "live_statistical_ties": 38, "shapes_run": 1024},
-      "quick": {"exact_replay_correct": 24, "frozen_decision_matches": 24, "live_exact_wins": 24, "live_floating_wins": 0, "live_statistical_ties": 0, "shapes_run": 24},
-      "standard": {"exact_replay_correct": 128, "frozen_decision_matches": 121, "live_exact_wins": 110, "live_floating_wins": 11, "live_statistical_ties": 7, "shapes_run": 128}
-    },
-    "integer_replay_bundle_sha256": "bee490cd5772e7fe2f222361febf18457ffd3aeec071ba3f0def8542d0c9bfc6",
-    "matmul_bundle_sha256": "0e0065f53f0f4809d4e9ec67a780af8a2b7fe8923ad057a77df60133ec17afe2",
-    "schema": "RNS-ENGINE-G4S1-PUBLIC-T4-CERTIFICATION-1"
-  },
+  "build_nvcc": "Cuda compilation tools, release 12.8, V12.8.93",
   "certification_member": "g4s1_certification.json",
+  "certified_integer_replay_bundle_sha256": "bee490cd5772e7fe2f222361febf18457ffd3aeec071ba3f0def8542d0c9bfc6",
+  "certified_matmul_bundle_sha256": "0e0065f53f0f4809d4e9ec67a780af8a2b7fe8923ad057a77df60133ec17afe2",
   "certified_runtime_zip_sha256": "af48bf21252f439bf97251d9411e6833b6f176790f7e0e6905f2a68f3ed2d221",
+  "compile": {
+    "arch": "sm_75",
+    "common": [
+      "-O3",
+      "-std=c++17",
+      "-arch=sm_75",
+      "-Xcompiler=-ffunction-sections",
+      "-Xcompiler=-fdata-sections",
+      "-Xlinker=--gc-sections"
+    ],
+    "libraries": ["-lcublasLt", "-lcublas"],
+    "shared_extra": ["-shared", "-Xcompiler=-fPIC"]
+  },
   "compute_capability": "7.5",
   "frozen_final_ledger_sha256": "5415bf02bd435d542f402f0c97ed74efca03b6e1c8ca99695c8a296d814936ca",
   "frozen_integer_exact_wins": 938,
   "frozen_integer_nvidia_wins": 86,
   "full_validation_report_sha256": "6c1229e501ac34fbbe61425e2b78c6fd7cb8ff0b26685d87ecf1ab97b906ea56",
   "hardware": "Tesla T4",
-  "integer_members": {
-    "direct": "integer/rns_integer_direct_replay",
-    "fused": "integer/rns_integer_fused_replay",
-    "generic": "integer/rns_integer_generic_replay",
-    "row": "integer/rns_integer_row_replay",
-    "splitk": "integer/rns_integer_splitk_replay",
-    "strip": "integer/rns_integer_strip_replay"
+  "integer_sources": {
+    "direct": "source/rns_integer_direct_replay.cu",
+    "fused": "source/rns_integer_fused_replay.cu",
+    "generic": "source/rns_integer_generic_replay.cu",
+    "row": "source/rns_integer_row_replay.cu",
+    "splitk": "source/rns_integer_splitk_replay.cu",
+    "strip": "source/rns_integer_strip_replay.cu"
   },
-  "integer_replay_bundle_sha256": "bee490cd5772e7fe2f222361febf18457ffd3aeec071ba3f0def8542d0c9bfc6",
-  "matmul_bundle_sha256": "0e0065f53f0f4809d4e9ec67a780af8a2b7fe8923ad057a77df60133ec17afe2",
-  "matmul_members": {
-    "direct": "matmul/librns_g4s1_matmul_direct.so",
-    "fused": "matmul/librns_g4s1_matmul_fused.so",
-    "generic": "matmul/librns_g4s1_matmul_generic.so",
-    "row": "matmul/librns_g4s1_matmul_row.so",
-    "splitk": "matmul/librns_g4s1_matmul_splitk.so",
-    "strip": "matmul/librns_g4s1_matmul_strip.so"
+  "matmul_sources": {
+    "direct": "source/rns_g4s1_matmul_direct.cu",
+    "fused": "source/rns_g4s1_matmul_fused.cu",
+    "generic": "source/rns_g4s1_matmul_generic.cu",
+    "row": "source/rns_g4s1_matmul_row.cu",
+    "splitk": "source/rns_g4s1_matmul_splitk.cu",
+    "strip": "source/rns_g4s1_matmul_strip.cu"
   },
   "members_sha256": {
-    "g4s1_certification.json": "d6b8c2bf25c788d4fbed45f6fa2a5077e588c3422a5a887192fb1909c06d2e5a",
+    "g4s1_certification.json": "292a4e31abdbf99d0b8854879c23502bc5d3fb58e96ddf920cb3627114728931",
     "g4s1_matmul_shapes.json": "ac612da046601fa0f2a6e23f3ddcf58d5d91699cef3a9263a5a00118ccbb2873",
-    "integer/rns_integer_direct_replay": "5731a7cb4f4c8e9c9bde9d33561783a04c8ea76550148488af4be8ca01aed0e7",
-    "integer/rns_integer_fused_replay": "c5e84b35efbc973fc512011a137d3169365d6b54fdf25406bffa2fa9e006de64",
-    "integer/rns_integer_generic_replay": "6e519ac40574c1286a3173018bbb6a758fe493c274c767a978480fb771164520",
-    "integer/rns_integer_row_replay": "9f1c3535607192c543357d3a0d5633c0529dd72e966096a885096014ff550ce0",
-    "integer/rns_integer_splitk_replay": "cbb62e1de246950ada0233820d955829e84f40d98934542e60133c71d132dbb0",
-    "integer/rns_integer_strip_replay": "275f675566b579bce26c2f03c9ff77110c444c63779db019f76a694a36a82e5d",
-    "matmul/librns_g4s1_matmul_direct.so": "8455d2903d9a49dd3153cc0cf07c55da018520c71db7ec1acb15651112830ab4",
-    "matmul/librns_g4s1_matmul_fused.so": "b026253cfc1f1723b748222fa663d45adf00d553d327ef8593661333eea4b1f3",
-    "matmul/librns_g4s1_matmul_generic.so": "45c3d96bc6fc31244501a90c8aa76468f5c72140e7294008f62d504584b5c742",
-    "matmul/librns_g4s1_matmul_row.so": "d96e6c2abef5b0cfc123306cae04ff3fabb719f92d3eddd3c6e46506ab1de315",
-    "matmul/librns_g4s1_matmul_splitk.so": "1483f1c885ea9f82d4cb12b0a0428bb09d1a120f46dc0add13e7d65c84ef7208",
-    "matmul/librns_g4s1_matmul_strip.so": "568dc7a0d60a75f50cc278ca3293bca3a734eb835ca4313bcd1942b583c03e65"
+    "source/rns_g4s1_matmul_direct.cu": "d9c803213314237e8a945c63a0fea59e557d67329e32a626529088e9ccb1f4b0",
+    "source/rns_g4s1_matmul_fused.cu": "b7586b123002b92d045497c9127daabab1cd5ef93ec69d4ef8ee12cbc1409bca",
+    "source/rns_g4s1_matmul_generic.cu": "c47b4869b4af9f68027664a41e436613425b2ac0e211f297bcd6de813abf8a0b",
+    "source/rns_g4s1_matmul_row.cu": "bc0ed2d148aa0bc7112db18b622995051a8b70c3e9ef0805d43218183e9b9570",
+    "source/rns_g4s1_matmul_splitk.cu": "0a6ffc121f0211d7e9f620000cfce78ad61df4d6bca4918026ec397c2f9078b9",
+    "source/rns_g4s1_matmul_strip.cu": "6ca0ad58cc7f54fe3d3b5534479b52bb00d0d8d09f26d9bd53daf64c83bd85eb",
+    "source/rns_integer_direct_replay.cu": "d2206214cfe5d74110c5fd2b50c3db7ee1d6bd10ecc8171569869c1fd32ed1ff",
+    "source/rns_integer_fused_replay.cu": "f4ec25c6425d1d7e9aa2bdb5be893a5a89ee780e4b45c58a52a9b23a98d153d9",
+    "source/rns_integer_generic_replay.cu": "023abff6b8cd7c289e68a7b69b9bc585dc463a8618ddf43979458e8fecbe6252",
+    "source/rns_integer_row_replay.cu": "fa8f0e62462e8ea4aa1f1ba718430adf5ea87a6de92755f6c8524021048191f8",
+    "source/rns_integer_splitk_replay.cu": "c9a9c431c33dbcfa452c493a2f31c4d724d9bc112d40fc90f71691c3c6d6e544",
+    "source/rns_integer_strip_replay.cu": "f4dadbb2d394d9e567f1571c347186ee163599495b6c1ceb69dd253087d5f2dc"
   },
   "modes": {"full": 1024, "quick": 24, "standard": 128},
   "numeric_contract": {
@@ -81,39 +63,34 @@
     "rational_inputs": "SharedScaleMatrix with signed-int8 numerators and positive integer shared scale",
     "rational_output": "exact SharedScaleMatrix; output scale = left.scale * right.scale"
   },
-  "payload_format": "base64+xz+tar",
+  "payload_format": "base64+xz+tar-public-execution-source",
   "payload_part_sha256": {
-    "g4s1_public_t4_bundle_p01.b64": "90f57b5003ef484e181bf9e7b6ef67344950734098da7d5afcae8c5f92f60714",
-    "g4s1_public_t4_bundle_p02.b64": "3872baec648c92114423c737b54939f4f011c1d10e1c9e33955f1f39be2f7c9b",
-    "g4s1_public_t4_bundle_p03.b64": "1aeb11532ecf0f403ef74713ee02ca2bbe3653648a3d066f55ab5211d2a0aadd",
-    "g4s1_public_t4_bundle_p04.b64": "d8a7c02a68bf49f9f6ea925552ff7121a27e8b6f2668f880a188ae45f20d9b01",
-    "g4s1_public_t4_bundle_p05.b64": "0bf890d5ea8d57dfef7bfa78c16a69fb9c7f74533972c26251329442d0c7dec9",
-    "g4s1_public_t4_bundle_p06.b64": "a3d4431a20d865c2e2d399fb22bf45fceb8504106fdfb9a5688c538b14a709c4",
-    "g4s1_public_t4_bundle_p07.b64": "994c884d52347c14c3d46ddb43f44da360e1f4347c87a4896a328c48bec07afe",
-    "g4s1_public_t4_bundle_p08.b64": "b9d3e3b61fb0fcb3b9a544aa2649172cfcf1f2df0bc7c2f68984fa6959a9c32e",
-    "g4s1_public_t4_bundle_p09.b64": "704fb0206c533ddb3c8b37b32a3d4c7590c5ce2399550c0216b5989ccc376abf",
-    "g4s1_public_t4_bundle_p10.b64": "dcf6cdef3611590efc7d1036f71513cc20d2f9fa35780180532ce21a8baa3a0e",
-    "g4s1_public_t4_bundle_p11.b64": "741f5106affdcbeb9fe482d85f50ffe5bc1480d4a53c2d146f8ea1bfa48c12f0"
+    "g4s1_public_t4_source_c01.b64": "711118bd11d34ffdac24f30dc46fca232824d280fc449f86e18011d4f0f94c8c",
+    "g4s1_public_t4_source_c02.b64": "36700ed0b2daa8f227d5a04006d02e5c77c54e5c32276f0ede47251eb0e95b68",
+    "g4s1_public_t4_source_c03.b64": "3cb42f61086ccd5335a68824af05f02e80dcaa006213e6e80d12a0c87a02c2de",
+    "g4s1_public_t4_source_c04.b64": "a77718c4b5233661d6a05372b7d9d56975ab489da181a3fdcead45d26037ccb4",
+    "g4s1_public_t4_source_c05.b64": "badf4ee7faa8516235af07389995c5cc622aff0bc03b34cc2c405ed737c31aaa",
+    "g4s1_public_t4_source_c06.b64": "aa209b529c23eb869c2384d4365581f8e23db2b98db19163f6d54414596bf498",
+    "g4s1_public_t4_source_c07.b64": "f3a9935a01ebfee5f48549da523e6b122f90e353f97340c74849a2dec87728c9",
+    "g4s1_public_t4_source_c08.b64": "97806a8395e8fe8b5bb043b4aeec097b05a66d206ea595e990fb7fd13e44c1b9",
+    "g4s1_public_t4_source_c09.b64": "cb7ac95d182c633008711a06d633f3a773511985d00e1d4c1ff3d32e784137fc",
+    "g4s1_public_t4_source_c10.b64": "a37239f5c7b845c5a64575403e2534080711dd0ae54ed6e434840a48a2d25282",
+    "g4s1_public_t4_source_c11.b64": "f7b83d4fd96c71602f13ce63a341bc71171a3ed3c23f342ec68877984d90a7dc",
+    "g4s1_public_t4_source_c12.b64": "b1af397f57f368ac0de09a650fdb6bbb1499240979d01eccec1f8d47ab64201d"
   },
   "payload_parts": [
-    "g4s1_public_t4_bundle_p01.b64",
-    "g4s1_public_t4_bundle_p02.b64",
-    "g4s1_public_t4_bundle_p03.b64",
-    "g4s1_public_t4_bundle_p04.b64",
-    "g4s1_public_t4_bundle_p05.b64",
-    "g4s1_public_t4_bundle_p06.b64",
-    "g4s1_public_t4_bundle_p07.b64",
-    "g4s1_public_t4_bundle_p08.b64",
-    "g4s1_public_t4_bundle_p09.b64",
-    "g4s1_public_t4_bundle_p10.b64",
-    "g4s1_public_t4_bundle_p11.b64"
+    "g4s1_public_t4_source_c01.b64", "g4s1_public_t4_source_c02.b64", "g4s1_public_t4_source_c03.b64",
+    "g4s1_public_t4_source_c04.b64", "g4s1_public_t4_source_c05.b64", "g4s1_public_t4_source_c06.b64",
+    "g4s1_public_t4_source_c07.b64", "g4s1_public_t4_source_c08.b64", "g4s1_public_t4_source_c09.b64",
+    "g4s1_public_t4_source_c10.b64", "g4s1_public_t4_source_c11.b64", "g4s1_public_t4_source_c12.b64"
   ],
-  "payload_sha256": "1a09fd4a63a29b6115b75dd0b85cbe6202894328cf77d0aba74c5985680ad131",
-  "schema": "RNS-ENGINE-G4S1-PUBLIC-T4-RUNTIME-2",
+  "payload_sha256": "3db92b68fe11322977d784ed05852f74e3d334751826895a5b122d7f9d99f6f3",
+  "privacy_boundary": "public execution sources only; G4 search, candidate generation, grammar, learner, and optimization machinery are not included",
+  "schema": "RNS-ENGINE-G4S1-PUBLIC-T4-SOURCE-RUNTIME-1",
   "series": 1,
   "shape_manifest_member": "g4s1_matmul_shapes.json",
   "source_archive_sha256": "b9f97f8e5d45956cc431665b0fbf7b990b1ef18b78b7c1859f1d827cd8d73dda",
   "supported_shapes": 1024,
-  "tar_sha256": "d7bff8fe852a61f534c490f515dce77dbaa90d1d6d0022708670a7419a7c434f",
-  "xz_sha256": "aa50da5bc75c4d76c69d3f7aa48e0438dcd5d30cd2812f2a9c7725eb33acf575"
+  "tar_sha256": "f7fc87d3c002ae492cb860eb44910f4097bdbaf8f3be6d9f302ce56bedfff2e0",
+  "xz_sha256": "6b361d2eb6714b470f0fec18646ee9f7590b832bb814aff19eab94a19b4caf3e"
 }
