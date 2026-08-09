@@ -40,7 +40,17 @@ all_shape_geomean^1024
     = g4_win_geomean^938 * nvidia_win_ratio_geomean^86
 ```
 
-The floating landscape uses FP16-input cuBLASLt configurations; the retained accumulation mode may be FP16 or FP32 for a given shape.
+The floating landscape uses FP16-input cuBLASLt configurations; the retained accumulation mode may be FP16 or FP32 for a given shape. FP16 is the **speed baseline**, not the exactness baseline. Series 1 asks whether exact arithmetic can reach floating-point-class throughput; it does not claim to beat every possible NVIDIA integer GEMM configuration.
+
+#### Signed-INT32 range contract
+
+The frozen shape manifest has `K <= 4096`. For full-range signed-INT8 inputs, the largest possible product magnitude is `128 × 128 = 16,384`, so the conservative worst-case dot-product magnitude is:
+
+```text
+4096 × 128 × 128 = 67,108,864
+```
+
+That is safely inside signed INT32 range. Thus all 1,024 certified Series 1 shapes are safe for full-range signed-INT8 inputs under the published exact signed-INT32 output contract.
 
 The historical integer archive preserves its actual measurement depth rather than pretending every shape used one block count:
 
@@ -58,7 +68,7 @@ The separately frozen G416 campaign records:
 - 870 certified exact-rational G4 wins
 - 110 NVIDIA wins
 - 41 statistical ties
-- 3 errors
+- 3 final errors
 - 84.96% certified exact-rational G4-win coverage
 - 31 paired timing blocks for every certified winner
 - actual non-integer inputs for every certified winner
@@ -73,6 +83,26 @@ Among the 870 certified G4-winning shapes:
 - slowest certified G4 win: **1.004345x**
 
 The frozen public rational summary does **not** expose an all-1,024 speedup aggregate or a loss-side aggregate, so this document does not invent either one.
+
+#### What the three final rational errors were
+
+The three shapes left in final `ERROR` state were:
+
+- `T4GL0140`
+- `T4GL0879`
+- `T4GL1020`
+
+Each final row records the same post-measurement bookkeeping exception: `KeyError: 'forecast_debt_bits'`. These were not silent arithmetic mismatches. Each row had already produced 31 paired timings, used actual non-integer inputs, and recorded `range_proved=True` plus `fp16_value_set_proved=True`. The campaign conservatively retained them as `ERROR` rather than reclassifying them from partial evidence.
+
+#### Shared-scale rational representation
+
+`SharedScaleMatrix` represents one integer numerator matrix divided by one positive integer scale. In the public Series 1 API:
+
+- numerator matrices must fit the signed-INT8 fast-input contract;
+- scales are positive Python integers, so scale metadata is not limited by a fixed-width integer type;
+- the output scale is exactly `left.scale * right.scale`;
+- `reduce=True` optionally divides a common factor from the numerator matrix and scale;
+- arbitrary per-element denominators are not part of the Series 1 fast-path contract.
 
 **Do not conflate the two percentages.** `938/1024` is the frozen exact-integer clean-sweep result. `870/1024` is the separately certified dynamic exact-rational result.
 
@@ -117,7 +147,7 @@ The public package contains:
 - `g4s1_public_summary.json` — the two frozen headline claims, full scorecard fields available from the archive, and provenance metadata.
 - `g4s1_public_t4_runtime.json` — integer/runtime integrity, hardware boundary, source-family metadata, shape manifest, compile contract, and public-source hashes.
 - rational replay runtime metadata and payload chunks used by the frozen rational replay path.
-- stripped public execution sources required for the Series 1 integer and `g4_matmul()` paths.
+- public execution sources required for the Series 1 integer and `g4_matmul()` paths.
 
 Every packaged execution/runtime component is SHA-256 integrity checked before use. If the packaged hashes do not match, the public path refuses to run.
 

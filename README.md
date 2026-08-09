@@ -2,7 +2,7 @@
 
 **Exact arithmetic, built to compete with floating-point speed.**
 
-G4 is a **general autonomous search and optimization system**. Give it a problem, a legal space of possible solutions, and a way to measure or certify success. G4 explores that space, learns from the results, decides what to try next, can promote or create new strategies when its active grammar allows it, and preserves the strongest verified solutions.
+G4 is a **general autonomous search and optimization system**. Give it a problem, a legal space of possible solutions, and a way to measure or certify success. G4 explores that space, learns from the results, decides what to try next, can promote or create new strategies when the declared problem space permits it, and preserves the strongest verified solutions.
 
 **G4 Series 1 applies that system to one problem: exact GPU matrix multiplication on NVIDIA Tesla T4.** Series 1 is a frozen application of G4, not a definition of what G4 can work on.
 
@@ -18,7 +18,7 @@ For speed, Series 1 compares its exact GEMM implementations against NVIDIA's opt
 | **Shapes** | frozen set of 1,024 `(M,N,K)` GEMM shapes |
 | **Unsupported input** | fails closed; no silent floating-point fallback |
 
-A shared-scale rational matrix has **one common scale/denominator for the whole matrix**. Series 1 does not claim arbitrary per-element rational denominators.
+A shared-scale rational matrix has **one common scale/denominator for the whole matrix**. Scales are positive Python integers, the output scale is their exact product, and optional `reduce=True` normalization is explicit rather than automatic. Series 1 does not claim arbitrary per-element rational denominators.
 
 ## Frozen integer scorecard
 
@@ -28,7 +28,7 @@ A shared-scale rational matrix has **one common scale/denominator for the whole 
 | **All-shape geomean** | **1.235x** |
 | **All-shape median** | **1.257x** |
 | **Win-only geomean** | **1.311x** |
-| **Loss-side throughput** | **64.60%** |
+| **G4 throughput on 86 losing shapes** | **64.60% of NVIDIA** |
 
 ## Frozen shared-scale rational scorecard
 
@@ -43,7 +43,11 @@ A shared-scale rational matrix has **one common scale/denominator for the whole 
 Speedup = NVIDIA time / G4 time.  
 **Exact** describes correctness. **Win** describes speed.
 
-The three rational errors remain explicitly recorded as errors in the frozen campaign; they are not counted as wins or ties.
+The three final rational errors were **post-measurement bookkeeping exceptions** (`KeyError: 'forecast_debt_bits'`), not silent arithmetic mismatches. Their rows had already produced paired timings and recorded real non-integer inputs with the range and FP16-value-set proof flags passing. They remain classified as errors and are not counted as wins or ties.
+
+### Why FP16?
+
+FP16 cuBLASLt is the Series 1 **speed baseline** because the Series 1 question is whether exact integer and shared-scale rational arithmetic can reach floating-point-class throughput on Tesla T4. It is not the exactness baseline. Series 1 does **not** claim that G4 beats every possible NVIDIA integer GEMM configuration.
 
 ---
 
@@ -88,9 +92,11 @@ print(C.numerators)
 print(C.scale)
 ```
 
-The reusable caller-supplied execution path was physically certified on **1,024 / 1,024 supported shapes** with full-range signed-INT8 data. Additional extreme-value and sparse-extreme tests also passed.
+For every certified Series 1 shape, full-range signed-INT8 inputs fit safely in the signed-INT32 output contract. The frozen manifest has `K <= 4096`; the worst possible magnitude bound is therefore `4096 × 128 × 128 = 67,108,864`, well below signed INT32 range.
 
-The package SHA-pins the stripped public execution-source bodies, shape manifest, certification receipt, compile flags, and provenance hashes.
+The reusable caller-supplied execution path was certified on **1,024 / 1,024 supported shapes on actual Tesla T4 hardware** with full-range signed-INT8 data. Additional extreme-value and sparse-extreme tests also passed.
+
+The package SHA-pins the **public execution-source bodies**, shape manifest, certification receipt, compile flags, and provenance hashes. The public execution sources contain the frozen Series 1 runtime; the private G4 search/learning machinery is not required to replay the result.
 
 ---
 
@@ -178,7 +184,7 @@ For rational GEMM, headline G4OPS uses the **end-to-end exact-result timing boun
 
 G4 is **not a GPU-specific system**. GPU arithmetic is simply the problem Series 1 applies it to.
 
-More generally, G4 works over a declared solution space and a declared success test. It can search candidate constructions, learn from measured outcomes, choose what to explore next, preserve useful experience, reject failures, and promote or create new strategies when the active problem grammar permits it.
+More generally, G4 works over a declared solution space and a declared success test. It can search candidate constructions, learn from measured outcomes, choose what to explore next, preserve useful experience, reject failures, and promote or create new strategies when the declared problem space permits it.
 
 In Series 1, the feedback happens to be unusually objective: an implementation must return the exact mathematical result, and then the hardware determines how fast it is.
 
@@ -250,7 +256,8 @@ g4_matmul
 - The benchmark catalog contains the declared **1,024 GEMM shapes**, not every possible matrix size.
 - The Series 1 user-math fast path accepts signed-INT8 integer matrices or shared-scale rational matrices with signed-INT8 numerators.
 - Integer outputs are exact signed INT32 matrices under the certified Series 1 contract.
-- Shared-scale rational outputs are exact and use one positive integer scale per matrix; Series 1 does not claim arbitrary per-element denominator support.
+- Shared-scale rational outputs are exact and use one positive Python-integer scale per matrix; output scale is the exact product of the inputs, with optional explicit reduction.
+- Series 1 does not claim arbitrary per-element rational denominators or general rational normalization.
 - Unsupported G4 shapes or representations fail closed rather than silently falling back to approximate floating point.
 - Integer and rational benchmark scores are always reported separately.
 - Future G4 generations are treated as separate Series rather than rewriting frozen Series 1 evidence.
