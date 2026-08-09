@@ -1,0 +1,97 @@
+{
+  "build_driver": "580.82.07",
+  "build_nvcc": "Cuda compilation tools, release 12.8, V12.8.93",
+  "certification_member": "g4s1_certification.json",
+  "certified_integer_replay_bundle_sha256": "bee490cd5772e7fe2f222361febf18457ffd3aeec071ba3f0def8542d0c9bfc6",
+  "integer_replay_bundle_sha256": "bee490cd5772e7fe2f222361febf18457ffd3aeec071ba3f0def8542d0c9bfc6",
+  "certified_matmul_bundle_sha256": "0e0065f53f0f4809d4e9ec67a780af8a2b7fe8923ad057a77df60133ec17afe2",
+  "certified_runtime_zip_sha256": "af48bf21252f439bf97251d9411e6833b6f176790f7e0e6905f2a68f3ed2d221",
+  "compile": {
+    "arch": "sm_75",
+    "common": [
+      "-O3",
+      "-std=c++17",
+      "-arch=sm_75",
+      "-Xcompiler=-ffunction-sections",
+      "-Xcompiler=-fdata-sections",
+      "-Xlinker=--gc-sections"
+    ],
+    "libraries": ["-lcublasLt", "-lcublas"],
+    "shared_extra": ["-shared", "-Xcompiler=-fPIC"]
+  },
+  "compute_capability": "7.5",
+  "frozen_final_ledger_sha256": "5415bf02bd435d542f402f0c97ed74efca03b6e1c8ca99695c8a296d814936ca",
+  "frozen_integer_exact_wins": 938,
+  "frozen_integer_nvidia_wins": 86,
+  "full_validation_report_sha256": "6c1229e501ac34fbbe61425e2b78c6fd7cb8ff0b26685d87ecf1ab97b906ea56",
+  "hardware": "Tesla T4",
+  "integer_sources": {
+    "direct": "source/rns_integer_direct_replay.cu",
+    "fused": "source/rns_integer_fused_replay.cu",
+    "generic": "source/rns_integer_generic_replay.cu",
+    "row": "source/rns_integer_row_replay.cu",
+    "splitk": "source/rns_integer_splitk_replay.cu",
+    "strip": "source/rns_integer_strip_replay.cu"
+  },
+  "matmul_sources": {
+    "direct": "source/rns_g4s1_matmul_direct.cu",
+    "fused": "source/rns_g4s1_matmul_fused.cu",
+    "generic": "source/rns_g4s1_matmul_generic.cu",
+    "row": "source/rns_g4s1_matmul_row.cu",
+    "splitk": "source/rns_g4s1_matmul_splitk.cu",
+    "strip": "source/rns_g4s1_matmul_strip.cu"
+  },
+  "members_sha256": {
+    "g4s1_certification.json": "292a4e31abdbf99d0b8854879c23502bc5d3fb58e96ddf920cb3627114728931",
+    "g4s1_matmul_shapes.json": "ac612da046601fa0f2a6e23f3ddcf58d5d91699cef3a9263a5a00118ccbb2873",
+    "source/rns_g4s1_matmul_direct.cu": "d9c803213314237e8a945c63a0fea59e557d67329e32a626529088e9ccb1f4b0",
+    "source/rns_g4s1_matmul_fused.cu": "b7586b123002b92d045497c9127daabab1cd5ef93ec69d4ef8ee12cbc1409bca",
+    "source/rns_g4s1_matmul_generic.cu": "c47b4869b4af9f68027664a41e436613425b2ac0e211f297bcd6de813abf8a0b",
+    "source/rns_g4s1_matmul_row.cu": "bc0ed2d148aa0bc7112db18b622995051a8b70c3e9ef0805d43218183e9b9570",
+    "source/rns_g4s1_matmul_splitk.cu": "0a6ffc121f0211d7e9f620000cfce78ad61df4d6bca4918026ec397c2f9078b9",
+    "source/rns_g4s1_matmul_strip.cu": "6ca0ad58cc7f54fe3d3b5534479b52bb00d0d8d09f26d9bd53daf64c83bd85eb",
+    "source/rns_integer_direct_replay.cu": "d2206214cfe5d74110c5fd2b50c3db7ee1d6bd10ecc8171569869c1fd32ed1ff",
+    "source/rns_integer_fused_replay.cu": "f4ec25c6425d1d7e9aa2bdb5be893a5a89ee780e4b45c58a52a9b23a98d153d9",
+    "source/rns_integer_generic_replay.cu": "023abff6b8cd7c289e68a7b69b9bc585dc463a8618ddf43979458e8fecbe6252",
+    "source/rns_integer_row_replay.cu": "fa8f0e62462e8ea4aa1f1ba718430adf5ea87a6de92755f6c8524021048191f8",
+    "source/rns_integer_splitk_replay.cu": "c9a9c431c33dbcfa452c493a2f31c4d724d9bc112d40fc90f71691c3c6d6e544",
+    "source/rns_integer_strip_replay.cu": "f4dadbb2d394d9e567f1571c347186ee163599495b6c1ceb69dd253087d5f2dc"
+  },
+  "modes": {"full": 1024, "quick": 24, "standard": 128},
+  "numeric_contract": {
+    "integer_inputs": "signed int8 matrices",
+    "integer_output": "exact signed int32 matrix",
+    "rational_inputs": "SharedScaleMatrix with signed-int8 numerators and positive integer shared scale",
+    "rational_output": "exact SharedScaleMatrix; output scale = left.scale * right.scale"
+  },
+  "payload_format": "base64+xz+tar-public-execution-source",
+  "payload_part_sha256": {
+    "g4s1_public_t4_source_c01.b64": "711118bd11d34ffdac24f30dc46fca232824d280fc449f86e18011d4f0f94c8c",
+    "g4s1_public_t4_source_c02.b64": "36700ed0b2daa8f227d5a04006d02e5c77c54e5c32276f0ede47251eb0e95b68",
+    "g4s1_public_t4_source_c03.b64": "3cb42f61086ccd5335a68824af05f02e80dcaa006213e6e80d12a0c87a02c2de",
+    "g4s1_public_t4_source_c04.b64": "a77718c4b5233661d6a05372b7d9d56975ab489da181a3fdcead45d26037ccb4",
+    "g4s1_public_t4_source_c05.b64": "badf4ee7faa8516235af07389995c5cc622aff0bc03b34cc2c405ed737c31aaa",
+    "g4s1_public_t4_source_c06.b64": "aa209b529c23eb869c2384d4365581f8e23db2b98db19163f6d54414596bf498",
+    "g4s1_public_t4_source_c07.b64": "f3a9935a01ebfee5f48549da523e6b122f90e353f97340c74849a2dec87728c9",
+    "g4s1_public_t4_source_c08.b64": "97806a8395e8fe8b5bb043b4aeec097b05a66d206ea595e990fb7fd13e44c1b9",
+    "g4s1_public_t4_source_c09.b64": "cb7ac95d182c633008711a06d633f3a773511985d00e1d4c1ff3d32e784137fc",
+    "g4s1_public_t4_source_c10.b64": "a37239f5c7b845c5a64575403e2534080711dd0ae54ed6e434840a48a2d25282",
+    "g4s1_public_t4_source_c11.b64": "f7b83d4fd96c71602f13ce63a341bc71171a3ed3c23f342ec68877984d90a7dc",
+    "g4s1_public_t4_source_c12.b64": "b1af397f57f368ac0de09a650fdb6bbb1499240979d01eccec1f8d47ab64201d"
+  },
+  "payload_parts": [
+    "g4s1_public_t4_source_c01.b64", "g4s1_public_t4_source_c02.b64", "g4s1_public_t4_source_c03.b64",
+    "g4s1_public_t4_source_c04.b64", "g4s1_public_t4_source_c05.b64", "g4s1_public_t4_source_c06.b64",
+    "g4s1_public_t4_source_c07.b64", "g4s1_public_t4_source_c08.b64", "g4s1_public_t4_source_c09.b64",
+    "g4s1_public_t4_source_c10.b64", "g4s1_public_t4_source_c11.b64", "g4s1_public_t4_source_c12.b64"
+  ],
+  "payload_sha256": "3db92b68fe11322977d784ed05852f74e3d334751826895a5b122d7f9d99f6f3",
+  "privacy_boundary": "public execution sources only; G4 search, candidate generation, grammar, learner, and optimization machinery are not included",
+  "schema": "RNS-ENGINE-G4S1-PUBLIC-T4-SOURCE-RUNTIME-1",
+  "series": 1,
+  "shape_manifest_member": "g4s1_matmul_shapes.json",
+  "source_archive_sha256": "b9f97f8e5d45956cc431665b0fbf7b990b1ef18b78b7c1859f1d827cd8d73dda",
+  "supported_shapes": 1024,
+  "tar_sha256": "f7fc87d3c002ae492cb860eb44910f4097bdbaf8f3be6d9f302ce56bedfff2e0",
+  "xz_sha256": "6b361d2eb6714b470f0fec18646ee9f7590b832bb814aff19eab94a19b4caf3e"
+}

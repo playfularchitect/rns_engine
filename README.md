@@ -2,27 +2,95 @@
 
 **Exact arithmetic without the usual speed-or-accuracy tradeoff.**
 
-We tested two separate exact-arithmetic systems **directly against NVIDIA's own optimized cuBLASLt FP16-input GEMM implementation** on the same class of NVIDIA Tesla T4 GPU across **1,024 different matrix-multiplication shapes**.
+G4 Series 1 contains two separate exact-arithmetic systems tested **directly against NVIDIA's optimized cuBLASLt FP16-input GEMM implementation** on the same class of NVIDIA Tesla T4 GPU across **1,024 matrix-multiplication shapes**.
 
-The tests were run on **standard Tesla T4 hardware provided through Google Colab** — publicly available commodity cloud hardware, not a custom GPU, private lab rig, or specially modified machine.
+The tests were run on **standard Tesla T4 hardware provided through Google Colab** — publicly available commodity cloud hardware, not a custom GPU or private lab rig.
 
 | Exact arithmetic tested | Faster than NVIDIA | Win rate |
 |---|---:|---:|
 | **Exact integer GEMM** | **938 / 1,024 shapes** | **91.60%** |
 | **Exact rational GEMM** | **870 / 1,024 shapes** | **84.96%** |
 
-These are **two separate results**. The integer benchmark and rational benchmark were run and scored independently.
+These are **two separate benchmark results**. The integer and rational systems are run, certified, and scored independently.
 
-For the rational result, we also built a separate public replay runtime and reran all 1,024 shapes from scratch on a standard Google Colab Tesla T4:
+> **Exact** describes correctness. **Win** describes speed. A calculation remains mathematically exact even on a shape where NVIDIA wins the timing comparison.
 
-- **1,024 / 1,024** exact rational calculations reproduced the correct mathematical result.
-- **834 / 1,024** were faster than NVIDIA's FP16 implementation on the fresh replay.
-- **114 / 1,024** were slower than NVIDIA's FP16 implementation.
-- **76 / 1,024** were statistical ties.
+---
 
-In both cases, we squared our exact arithmetic directly against **NVIDIA's own optimized FP16 GEMM implementation on the same publicly available Tesla T4 hardware** — and won the speed comparison across the large majority of the tested matrix sizes, **without accepting the usual tradeoff between speed and accuracy. You can have both.**
+## XOPS: exact throughput
 
-> **Exact** describes correctness. **Win** describes speed. A shape can remain mathematically exact even when NVIDIA wins the timing comparison.
+G4 uses a throughput metric for exact arithmetic:
+
+**XOP** — one mathematically exact arithmetic operation.  
+**XOPS** — exact arithmetic operations per second.  
+**G4OPS** — XOPS delivered by a G4 implementation.
+
+For GEMM, XOPS intentionally uses the **same conventional operation count as FLOPS**:
+
+```text
+XOP count = 2 × M × N × K
+```
+
+That keeps exact and floating-point throughput directly comparable instead of changing the counting rule.
+
+The eligibility rule is strict:
+
+```text
+exactness PASS -> operations may count toward XOPS
+exactness FAIL -> 0 XOPS credit
+```
+
+Every public benchmark prints this key before reporting XOPS/G4OPS, so a saved notebook is self-explaining even if the reader never opened this README.
+
+For rational GEMM, the headline G4OPS timing boundary is deliberately **end-to-end**: exact GEMM execution plus the rational metadata/bookkeeping required to produce the exact rational result. The benchmark still credits only the conventional `2*M*N*K` GEMM operations, making that rate conservative rather than hiding bookkeeping outside the clock.
+
+---
+
+## Use G4 directly
+
+Series 1 is not only a benchmark replay. The package carries the SHA-pinned, public-safe execution sources for the physically certified G4 runtime covering the current 1,024-shape catalog. On first Tesla T4 use, `rns_engine` verifies that source bundle, compiles the required execution family with the frozen V7 CUDA flags, and caches the resulting kernel locally:
+
+```python
+import numpy as np
+import rns_engine as rns
+
+A = np.arange(16 * 16, dtype=np.int16).reshape(16, 16) % 17 - 8
+B = np.arange(16 * 16, dtype=np.int16).reshape(16, 16) % 13 - 6
+
+# Inputs are converted only after the exact signed-INT8 range check.
+C = rns.g4_matmul(A, B)
+
+assert C.dtype == np.int32
+```
+
+`g4_matmul()` accepts exact signed-INT8 integer matrices on the certified Series 1 shapes and returns exact signed-INT32 output.
+
+Exact shared-scale rationals use the same API:
+
+```python
+left = rns.SharedScaleMatrix(A, scale=3)
+right = rns.SharedScaleMatrix(B, scale=5)
+
+C = rns.g4_matmul(left, right)
+
+# Exactly (A @ B) / 15. No floating conversion.
+print(C.numerators)
+print(C.scale)
+```
+
+Current fast-path contract:
+
+- hardware: **NVIDIA Tesla T4 / compute capability 7.5**;
+- shapes: the frozen **1,024 Series 1 `(M,N,K)` shapes**;
+- integer inputs: signed INT8 matrices;
+- integer output: exact signed INT32 matrix;
+- rational inputs: `SharedScaleMatrix` with signed-INT8 numerators and positive integer shared scales;
+- rational output: exact `SharedScaleMatrix`;
+- unsupported shapes or representations **fail closed** — no silent floating-point fallback.
+
+The reusable execution path was physically certified on all **1,024 / 1,024** supported shapes with caller-supplied full-range signed-INT8 data. Additional extreme-value and sparse-extreme subsets also passed. The public package SHA-pins the exact stripped execution-source bodies, shape manifest, certification receipt, compile flags, and source archive provenance; private G4 search/learning code is not included.
+
+**FP32-class G4 Series 2 support is in development and is intended to extend this same `g4_matmul()` API once physically certified.**
 
 ---
 
@@ -44,21 +112,61 @@ rns.g4_results("integer")
 rns.g4_results("rational")
 ```
 
-On a **Tesla T4 / compute capability 7.5**, physically rerun the exact-rational comparison:
+On a **Tesla T4 / compute capability 7.5**, there are three benchmark entry points:
 
 ```python
 import rns_engine as rns
 
-rns.g4_benchmark("quick")     # 24 shapes
-rns.g4_benchmark("standard")  # 128 shapes
-rns.g4_benchmark("full")      # all 1,024 shapes
+# Integers first, then rationals. Scores remain separate.
+rns.g4_benchmark("full")
+
+# Run only one species if desired.
+rns.g4_integer_benchmark("full")
+rns.g4_rational_benchmark("full")
 ```
 
-`g4_benchmark()` is deliberately fail-closed. Series 1 is frozen to the Tesla T4; running on a different GPU would be a different benchmark.
+Modes are shared across all three:
 
-The live benchmark is **replay-only**: it reruns the frozen Series 1 implementations rather than performing a new G4 search.
+```text
+quick     24 shapes
+standard  128 shapes
+full      1,024 shapes
+```
 
-See [`G4_SERIES1_EVIDENCE.md`](G4_SERIES1_EVIDENCE.md) for the benchmark protocol, claim boundaries, and replay provenance.
+The public runners print progress/ETA, exactness, speed wins/losses/ties, XOPS/G4OPS, reproducibility, source/runtime provenance SHA-256s, all-result-row SHA-256s, and cryptographic run receipts.
+
+`g4_benchmark()` is a convenience runner. It runs **G4 INTEGERS first and G4 RATIONALS second**, but it does **not** combine them into one win percentage.
+
+All Series 1 public GPU APIs fail closed outside the frozen Tesla T4 hardware contract. Running them on another GPU would be a different experiment.
+
+The benchmark paths are **replay-only**: they rerun frozen Series 1 implementations rather than performing a new G4 search.
+
+See [`G4_SERIES1_EVIDENCE.md`](G4_SERIES1_EVIDENCE.md) for benchmark protocol, claim boundaries, and replay provenance.
+
+---
+
+## Public physical validation
+
+The reusable integer + user-math runtime was built and certified on a Google Colab Tesla T4 with compute capability 7.5, driver `580.82.07`, and CUDA `12.8 / nvcc V12.8.93`.
+
+Its full integer certification run produced:
+
+- **1,024 / 1,024** exact integer calculations correct;
+- **874 / 1,024** fresh G4 speed wins;
+- **112 / 1,024** NVIDIA speed wins;
+- **38 / 1,024** statistical ties;
+- **953 / 1,024** faster/slower/tie classifications matching the frozen integer archive.
+
+Those fresh timing numbers are a **reproduction run**, not a replacement for the frozen headline result of **938 / 1,024 = 91.60%**. Timing classifications can move with clocks, driver state, and normal measurement noise; mathematical exactness must not move.
+
+The earlier fresh rational replay produced:
+
+- **1,024 / 1,024** exact rational calculations correct;
+- **834 / 1,024** fresh G4 speed wins;
+- **114 / 1,024** NVIDIA speed wins;
+- **76 / 1,024** statistical ties.
+
+The frozen rational headline remains **870 / 1,024 = 84.96%**.
 
 ---
 
@@ -66,7 +174,7 @@ See [`G4_SERIES1_EVIDENCE.md`](G4_SERIES1_EVIDENCE.md) for the benchmark protoco
 
 G4 is the autonomous optimization/research system that discovered the benchmarked implementations.
 
-This repository exposes the **results and a reproducible replay runtime**.
+`rns_engine` exposes the frozen evidence, reproducible replay paths, and the certified Series 1 execution library. The public package contains only stripped execution-source bodies and their provenance/certification data; the private G4 search, candidate-generation, grammar, learner, and optimization machinery is not shipped.
 
 ---
 
@@ -83,9 +191,10 @@ The package includes:
 - local and global GEMM capacity planning;
 - multi-rail exact reconstruction tools;
 - Tensor-Core / CUDA integration contracts and fixtures;
-- frozen G4 Series 1 benchmark evidence and Tesla T4 replay.
+- frozen G4 Series 1 integer and rational replay evidence;
+- certified G4 Series 1 exact `g4_matmul()` on the current 1,024-shape T4 catalog.
 
-The core idea is simple: perform arithmetic across independent modular rails, then reconstruct the exact result when the declared range proves that the answer is unique.
+The core RNS idea is simple: perform arithmetic across independent modular rails, then reconstruct the exact result when the declared range proves the answer is unique.
 
 ---
 
@@ -97,7 +206,7 @@ pip install rns_engine
 
 Supported Python versions: **3.10–3.14**.
 
-Prebuilt wheels are available for supported Linux x86-64, macOS Intel/Apple silicon, and Windows x64 Python targets.
+Prebuilt wheels are available for supported Linux x86-64, macOS Intel/Apple silicon, and Windows x64 Python targets. The G4 Series 1 GPU execution path itself is currently Linux + Tesla T4 specific, requires `nvcc` to compile/cache the verified execution sources on first use, and fails closed elsewhere. Standard Google Colab T4 runtimes provide the required CUDA toolchain.
 
 ---
 
@@ -163,7 +272,6 @@ Use a range certificate:
 ```python
 certificate = rns.certify_signed_bound(max_abs_bound=1_000_000)
 certificate.require_unique()
-
 print(certificate.headroom)
 ```
 
@@ -175,16 +283,7 @@ certificate = rns.certify_signed_dot_bound(
     left_abs_bound=127,
     right_abs_bound=127,
 )
-
 certificate.require_unique()
-```
-
-The conservative bound is:
-
-```text
-output bound
-=
-inner dimension × left bound × right bound + addend bound
 ```
 
 `decode_signed()` gives the centered representative. **It does not, by itself, prove that an unknown mathematical result did not wrap.** Use the range-certificate APIs when uniqueness matters.
@@ -193,7 +292,7 @@ inner dimension × left bound × right bound + addend bound
 
 ## Exact rational GEMM reference path
 
-`rns_engine` includes shared-scale exact matrix objects and a correctness-first wide-RNS reference path:
+The package also includes a correctness-first, hardware-independent shared-scale reference path for wider exact-rational experiments:
 
 ```python
 import numpy as np
@@ -203,7 +302,6 @@ left = rns.SharedScaleMatrix(
     np.array([[2**40 + 3, -17], [29, 2**35 - 5]], dtype=object),
     scale=6,
 )
-
 right = rns.SharedScaleMatrix(
     np.array([[31, -(2**30) + 9], [2**33 + 1, 43]], dtype=object),
     scale=35,
@@ -222,7 +320,7 @@ assert receipt.output_scale == 210
 result = receipt.as_matrix()
 ```
 
-The public G4 T4 benchmark is a **frozen replay artifact** for the Series 1 exact-rational discoveries; it is not a general-purpose CUDA backend for arbitrary `rns_engine` operations.
+This reference API and the G4 Series 1 T4 fast path serve different purposes: the reference path prioritizes general correctness machinery; `g4_matmul()` dispatches the frozen physically certified Series 1 implementations for its declared input/shape contract.
 
 ---
 
@@ -248,19 +346,8 @@ receipt = rns.accumulate_weighted_int32(
     weights=[1, -3, 8],
     require_unique=True,
 )
-
 exact = receipt.decode_signed()
 ```
-
-The conservative bound is:
-
-```text
-max_abs_bound
-=
-sum(abs(weight[t]) × max_abs(partial[t]))
-```
-
-The proof receipt retains the original arbitrary-precision weights while execution uses lawful residues modulo the RNS product.
 
 ---
 
@@ -292,7 +379,7 @@ print(local.safe)
 print(global_plan.current_unique)
 ```
 
-See [`CAPACITY_PLANNING.md`](CAPACITY_PLANNING.md) for the exact laws and limits.
+See [`CAPACITY_PLANNING.md`](CAPACITY_PLANNING.md) for exact laws and limits.
 
 ---
 
@@ -313,13 +400,7 @@ Their product is:
 M = 35,742,890,181,197,824
 ```
 
-Unsigned reconstruction lives in:
-
-```text
-[0, M)
-```
-
-The centered signed interpretation is:
+Unsigned reconstruction lives in `[0, M)`. The centered signed interpretation is:
 
 ```text
 [-17,871,445,090,598,912,
@@ -327,8 +408,6 @@ The centered signed interpretation is:
 ```
 
 Arithmetic runs independently on the rails and reconstructs the canonical value with CRT/Garner-style reconstruction.
-
-For wider exact GEMM work, the package also contains correctness-first seven-rail reference configurations and capacity-planning tools.
 
 ---
 
@@ -370,22 +449,23 @@ reconstruct_grouped_partials
 accumulate_weighted_int32_wide
 ```
 
-### CUDA / backend verification
-
-```text
-CudaGemmFixture
-ExactPipelineBackend
-CpuExactPipelineBackend
-build_cuda_gemm_fixture
-verify_backend
-run_pre_cuda_readiness
-```
-
-### G4 evidence and reproduction
+### G4 Series 1
 
 ```text
 g4_results
 g4_benchmark
+g4_integer_benchmark
+g4_rational_benchmark
+g4_matmul
+```
+
+The four active G4 execution/benchmark APIs are:
+
+```text
+g4_benchmark           -> integers first, then rationals
+g4_integer_benchmark   -> integers only
+g4_rational_benchmark  -> rationals only
+g4_matmul               -> use the certified exact G4 GEMM runtime
 ```
 
 Use `rns.info()` for the installed engine's current range, moduli, version, and native capability summary.
@@ -394,15 +474,17 @@ Use `rns.info()` for the installed engine's current range, moduli, version, and 
 
 ## Scope and limitations
 
-The benchmark claims in this repository are intentionally narrow and reproducible:
+The public claims are intentionally narrow and reproducible:
 
-- **G4 Series 1 is a Tesla T4 benchmark.** Results on another GPU are a different experiment.
-- The reported scores cover the declared **1,024 GEMM shapes**, not every possible matrix size.
-- The **integer and rational results are separate benchmarks** and should not be combined into one percentage.
-- `g4_benchmark()` replays frozen discoveries; it does not rerun G4's search process.
-- Fresh timing classifications can move with clocks, driver state, and normal measurement noise. Mathematical exactness must not move.
-- Exact signed reconstruction requires an independently valid range bound; modular correctness alone does not prove no wrap.
-- The public Series 1 replay runtime is a benchmark artifact, not a general CUDA implementation of every `rns_engine` API.
+- **G4 Series 1 is frozen to Tesla T4 / compute capability 7.5.** Results on another GPU are a different experiment.
+- The reported benchmarks cover the declared **1,024 GEMM shapes**, not every possible matrix size.
+- The **integer and rational results are separate benchmarks** and are never combined into one percentage.
+- `g4_benchmark()` is a convenience runner that executes those two separate benchmarks in sequence.
+- `g4_integer_benchmark()` and `g4_rational_benchmark()` replay frozen discoveries; they do not rerun G4's search process.
+- Fresh timing classifications can move with clocks, driver state, and measurement noise. Mathematical exactness must not move.
+- `g4_matmul()` currently supports signed-INT8 integer inputs or signed-INT8 shared-scale rational numerators on the certified 1,024-shape Series 1 catalog.
+- Unsupported G4 shapes/representations fail closed rather than silently approximating.
+- Exact signed reconstruction elsewhere in the library still requires an independently valid range bound; modular correctness alone does not prove no wrap.
 
 ### Division
 
@@ -421,7 +503,6 @@ Division requires the divisor to be invertible on every default rail:
 - [`CAPACITY_PLANNING.md`](CAPACITY_PLANNING.md) — local/global exactness and accumulator capacity
 - [`PRE_CUDA_READINESS.md`](PRE_CUDA_READINESS.md) — correctness oracle and CUDA integration contract
 - [`CUDA_PARALLEL_LANES.md`](CUDA_PARALLEL_LANES.md) — parallel rail planning
-- [`colab/T4_EXACT_GEMM_BRINGUP.ipynb`](colab/T4_EXACT_GEMM_BRINGUP.ipynb) — earlier CUDA bring-up fixture
 
 ---
 
