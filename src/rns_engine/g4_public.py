@@ -1,10 +1,12 @@
 """Public G4 Series 1 benchmark entry points."""
 from __future__ import annotations
 
+import math
+import statistics
 import sys
 from typing import TextIO
 
-from .g4_integer_benchmark import _g4_integer_benchmark, g4_integer_benchmark
+from .g4_integer_benchmark import _g4_integer_benchmark
 from .g4_trust import g4_benchmark as _legacy_rational_benchmark, _sha256_json
 from .g4_xops import build_xops_summary, format_xops, print_xops_key, print_xops_summary
 
@@ -52,6 +54,50 @@ def _validate_mode(mode: str) -> str:
     return selected
 
 
+def _geomean(values: list[float]) -> float:
+    if not values:
+        return 0.0
+    if any(value <= 0.0 for value in values):
+        raise RuntimeError("speedup ratios must be positive")
+    return math.exp(sum(math.log(value) for value in values) / len(values))
+
+
+def _print_fresh_integer_scorecard(result: dict, stream: TextIO) -> None:
+    rows = result["rows"]
+    all_ratios = [float(row["speedup_fp16_over_exact"]) for row in rows]
+    win_ratios = [
+        float(row["speedup_fp16_over_exact"])
+        for row in rows
+        if row["live_decision"] == "EXACT_WIN"
+    ]
+    loss_ratios = [
+        float(row["speedup_fp16_over_exact"])
+        for row in rows
+        if row["live_decision"] == "FLOATING_WIN"
+    ]
+
+    lines = [
+        "Speedup ratio = NVIDIA time / G4 time; >1.0x means G4 is faster.",
+        f"All {len(all_ratios)} shapes: {_geomean(all_ratios):.3f}x geomean | {statistics.median(all_ratios):.3f}x median",
+    ]
+    if win_ratios:
+        lines.append(
+            f"G4-winning shapes: {_geomean(win_ratios):.3f}x geomean | "
+            f"{statistics.median(win_ratios):.3f}x median | {max(win_ratios):.3f}x best"
+        )
+    else:
+        lines.append("G4-winning shapes: none in this run")
+    if loss_ratios:
+        retained = _geomean(loss_ratios)
+        lines.append(
+            f"NVIDIA-winning shapes: G4 retains {retained * 100.0:.2f}% throughput on geomean | "
+            f"G4 time penalty {(1.0 / retained - 1.0) * 100.0:.2f}%"
+        )
+    else:
+        lines.append("NVIDIA-winning shapes: none in this run")
+    _box("G4 INTEGERS - SPEED DISTRIBUTION - FRESH RUN", lines, stream)
+
+
 def _g4_rational_benchmark(
     mode: str = "quick",
     *,
@@ -86,6 +132,22 @@ def _g4_rational_benchmark(
     if display:
         print(file=out)
         print_xops_summary("XOPS / G4OPS - G4 RATIONALS", xops, out)
+    return result
+
+
+def g4_integer_benchmark(
+    mode: str = "quick",
+    *,
+    display: bool = True,
+    stream: TextIO | None = None,
+) -> dict:
+    """Rerun the frozen G4 Series 1 exact-integer benchmark on a Tesla T4."""
+    selected = _validate_mode(mode)
+    out = stream if stream is not None else sys.stdout
+    result = _g4_integer_benchmark(selected, display=display, stream=out, show_xops_key=True)
+    if display:
+        print(file=out)
+        _print_fresh_integer_scorecard(result, out)
     return result
 
 
@@ -133,7 +195,9 @@ def g4_benchmark(
 
     if display:
         print(file=out)
-        print("=== PART 2 / 2: G4 RATIONALS ===", file=out, flush=True)
+        _print_fresh_integer_scorecard(integer, out)
+        print(file=out)
+        print("=== PART 2 / 2: G4 RATIONALS ===", file=out)
 
     rational = _g4_rational_benchmark(
         selected,
@@ -161,7 +225,8 @@ def g4_benchmark(
     }
 
     if display:
-        isum = integer["summary"]; rsum = rational["summary"]
+        isum = integer["summary"]
+        rsum = rational["summary"]
         _box(
             "G4 SERIES 1 - COMBINED RUN SUMMARY (SCORES REMAIN SEPARATE)",
             [
