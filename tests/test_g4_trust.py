@@ -110,7 +110,7 @@ def test_public_wrapper_adds_and_prints_trust_pack(monkeypatch):
     text = output.getvalue()
 
     assert "trust_pack" in result
-    assert "TRUST PACK - CRYPTOGRAPHIC RUN RECEIPT" in text
+    assert "TRUST PACK - G4 RATIONAL RUN RECEIPT" in text
     assert "Environment: Google Colab | rns_engine 0.11.1 | release v0.11.1" in text
     assert "Replay binary SHA-256:   " + "a" * 64 in text
     assert "Replay payload SHA-256:  " + "b" * 64 in text
