@@ -28,7 +28,24 @@
   },
   "note": "Replay-only runtime. The packaged payload decodes byte-for-byte to the physically validated Tesla T4 replay binary identified by binary_sha256. Archived full configs are used exactly when preserved. Where the frozen ledger retained only a winner identity, every frozen physical config matching that identity is embedded and runtime selection occurs only inside that identity class before paired measurement. No omitted historical field is guessed.",
   "payload_format": "base64+gzip",
-  "payload_name": "g4s1_t4_replay.gz.b64",
+  "payload_part_sha256": {
+    "g4s1_t4_replay.part01.b64": "c2433013d4f6d55a132387b7ee3cca7f34e638a549215d06f9eaf7aa408b1b80",
+    "g4s1_t4_replay.part02.b64": "d861ee07eb448d667abd985892f63f9bc21f9ce28133a57c0fe7a5fc2497e774",
+    "g4s1_t4_replay.part03.b64": "b68505e4009ee6cad151f9e2205521ac761e2f36d346b2786bf956997d5f4fc1",
+    "g4s1_t4_replay.part04.b64": "0a324573b0ed5db2ecfed5c6320ec72171349ca9d350c7ce057ff363fb3d385e",
+    "g4s1_t4_replay.part05.b64": "b6f414e3782f45e8a0055d108c680fb00e90ba881b3f1a1499d62b3208d05c9c",
+    "g4s1_t4_replay.part06.b64": "4184abf708f52ca185ede2c4391c394166d1f991249c0745f3c1cb587434d8c3",
+    "g4s1_t4_replay.part07.b64": "0be17b5471c338d9c705ee3116f0f56513d79c31824abc06597b95e09c09629f"
+  },
+  "payload_parts": [
+    "g4s1_t4_replay.part01.b64",
+    "g4s1_t4_replay.part02.b64",
+    "g4s1_t4_replay.part03.b64",
+    "g4s1_t4_replay.part04.b64",
+    "g4s1_t4_replay.part05.b64",
+    "g4s1_t4_replay.part06.b64",
+    "g4s1_t4_replay.part07.b64"
+  ],
   "payload_sha256": "0badb45718371287e6da97c1840426c99f331949f8e75a09bd4d0b8f6b204da6",
   "privacy_scan_passed": true,
   "private_identity_class_manifest_sha256": "48e8b4c6b10a3f1321ca955bb49e977966c1dddfe0eb84b0f8a73e0dac092d1c",
