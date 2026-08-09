@@ -1,12 +1,12 @@
 # G4 Series 1 — Frozen Tesla T4 Evidence
 
-G4 Series 1 is frozen. This public layer exposes sanitized benchmark evidence plus a replay-only Tesla T4 runtime. It does **not** ship the private G4 optimizer, ACTG genomes, private search/learning state, generated grammar/profile files, private recovery machinery, or CUDA source.
+G4 Series 1 is frozen. This public layer exposes the frozen headline benchmark evidence plus a replay-only Tesla T4 runtime.
 
 ## Two separate frozen claims
 
 ### Exact integer clean sweep
 
-On the frozen `T4GL-1024-v1` suite, the final row-level decision ledger records:
+On the frozen `T4GL-1024-v1` suite, the final decision record contains:
 
 - 1,024 declared GEMM shapes
 - 938 exact integer wins
@@ -19,7 +19,7 @@ The floating landscape uses FP16-input cuBLASLt configurations; the retained acc
 
 ### Dynamic exact-rational campaign
 
-The later frozen G416 campaign records:
+The separately frozen G416 campaign records:
 
 - 1,024 evaluated shapes
 - 870 certified exact-rational wins
@@ -47,23 +47,20 @@ rns.g4_benchmark("standard")
 rns.g4_benchmark("full")
 ```
 
-`g4_results()` reads the frozen sanitized ledgers. `g4_benchmark()` physically replays the **dynamic exact-rational** comparison on a Tesla T4 and re-applies the frozen 31-paired-block certification rule. It does not run G4 search.
+`g4_results()` reports the frozen headline evidence. `g4_benchmark()` physically replays the **dynamic exact-rational** comparison on a Tesla T4 and re-applies the frozen 31-paired-block certification rule. It does not run G4 search.
 
 ## Replay-config provenance boundary
 
-Most full rational configs are preserved directly by the frozen work artifacts. Where the frozen result row retained the winner identity but omitted physical fields such as padding or stage ID, the one-time private build enumerates every full frozen candidate matching that retained identity. The public replay selects only within that identity class before measurement and does not claim which omitted member was historical. No timing-based historical config guess is permitted.
+Most full rational configs are preserved directly by the frozen work artifacts. Where the frozen result row retained the winner identity but omitted physical fields such as padding or stage ID, the one-time private build enumerated every full frozen candidate matching that retained identity. The public replay selects only within that identity class before measurement and does not claim which omitted member was historical. No timing-based historical config guess is permitted.
 
 For floating cuBLASLt baselines, Series 1 originally retained the opaque algorithm object returned by `cublasLtMatmulAlgoGetHeuristic`. The public replay therefore re-queries that same heuristic API on the frozen T4 descriptor/padding context and accepts only returned algorithms whose visible identity and workspace match the archived option. It does not attempt to reconstruct NVIDIA's opaque algorithm object from visible fields with `cublasLtMatmulAlgoInit`.
 
 The resulting provenance counts are stored in `g4s1_t4_runtime.json` and included in benchmark output.
 
-## Public files
+## Packaged public evidence/runtime
 
-- `g4s1_public_summary.json` — summary, claim labels, privacy boundary, and provenance hashes
-- `g4s1_integer_fp16_input_results.csv` — 1,024 sanitized integer clean-sweep rows
-- `g4s1_dynamic_exact_rational_results.csv` — 1,024 sanitized rational campaign rows
-- `g4s1_t4_replay.gz.b64` — packaged compressed replay payload; it decodes byte-for-byte to the stripped Tesla T4 executable that passed validation
-- `g4s1_t4_runtime.json` — runtime integrity, build boundary, and config-provenance metadata
-- `G4S1_SHA256SUMS` — hashes for packaged public data/runtime files
+- `g4s1_public_summary.json` — the two frozen headline claims and provenance metadata.
+- `g4s1_t4_runtime.json` — Tesla T4 runtime integrity, hardware boundary, config provenance, and the ordered replay-payload manifest.
+- `g4s1_t4_replay.part*.b64` — chunked Base64/XZ representation of the stripped replay executable. Every chunk is hashed individually; after reassembly the combined payload is hashed again; after decoding and decompression the executable must match SHA-256 `addce9d253b67f18944d558894e0d2e3273a9bd8de5c78f969bbc6bc5e763a66` or `g4_benchmark()` refuses to run.
 
-No internal optimizer identifiers, private search metadata, source-code lineage, or private G4 implementation state is present in the sanitized ledgers.
+The detailed G4 search machinery is not needed to reproduce the public replay result. The public package contains the evidence and runtime required by `g4_results()` and `g4_benchmark()`.
