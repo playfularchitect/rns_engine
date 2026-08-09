@@ -1,8 +1,24 @@
 # rns_engine
 
-**Exact arithmetic without the usual speed-or-accuracy tradeoff.**
+**Exact arithmetic, built to compete with floating-point speed.**
 
-G4 Series 1 contains two separate exact GEMM systems tested **directly against NVIDIA's optimized cuBLASLt FP16-input GEMM implementation** on the same class of NVIDIA Tesla T4 GPU across **1,024 matrix-multiplication shapes**.
+G4 is a **general autonomous search and optimization system**. Give it a problem, a legal space of possible solutions, and a way to measure or certify success. G4 explores that space, learns from the results, decides what to try next, can promote or create new strategies when its active grammar allows it, and preserves the strongest verified solutions.
+
+**G4 Series 1 applies that system to one problem: exact GPU matrix multiplication on NVIDIA Tesla T4.** Series 1 is a frozen application of G4, not a definition of what G4 can work on.
+
+For speed, Series 1 compares its exact GEMM implementations against NVIDIA's optimized cuBLASLt FP16-input GEMM. **FP16 is the fast floating-point speed baseline; G4 is exactness-gated separately.** The benchmark asks whether exact arithmetic can compete with floating-point-class speed, not whether FP16 provides the same correctness guarantee.
+
+## Series 1 at a glance
+
+| | Certified Series 1 contract |
+|---|---|
+| **Integer math** | signed INT8 matrices -> exact signed INT32 result |
+| **Shared-scale rational math** | signed INT8 numerator matrix + one positive integer scale per matrix -> exact shared-scale result |
+| **GPU** | NVIDIA Tesla T4 / compute capability 7.5 |
+| **Shapes** | frozen set of 1,024 `(M,N,K)` GEMM shapes |
+| **Unsupported input** | fails closed; no silent floating-point fallback |
+
+A shared-scale rational matrix has **one common scale/denominator for the whole matrix**. Series 1 does not claim arbitrary per-element rational denominators.
 
 ## Frozen integer scorecard
 
@@ -14,7 +30,20 @@ G4 Series 1 contains two separate exact GEMM systems tested **directly against N
 | **Win-only geomean** | **1.311x** |
 | **Loss-side throughput** | **64.60%** |
 
-Speedup = NVIDIA time / G4 time.
+## Frozen shared-scale rational scorecard
+
+| Metric | Result |
+|---|---:|
+| **Record** | **870 wins / 110 losses / 41 ties / 3 errors** |
+| **Win-only geomean** | **1.417x** |
+| **Win-only median** | **1.406x** |
+| **Best certified win** | **2.978x** |
+| **All-shape aggregate** | not claimed by the frozen public summary |
+
+Speedup = NVIDIA time / G4 time.  
+**Exact** describes correctness. **Win** describes speed.
+
+The three rational errors remain explicitly recorded as errors in the frozen campaign; they are not counted as wins or ties.
 
 ---
 
@@ -30,23 +59,23 @@ The G4 Series 1 GPU path currently requires Linux, an NVIDIA Tesla T4, and `nvcc
 
 ---
 
-## Use G4
+## Use G4 Series 1
 
 ```python
 import numpy as np
 import rns_engine as rns
 
-A = np.arange(16 * 16, dtype=np.int16).reshape(16, 16) % 17 - 8
-B = np.arange(16 * 16, dtype=np.int16).reshape(16, 16) % 13 - 6
+A = (np.arange(16 * 16).reshape(16, 16) % 17 - 8).astype(np.int8)
+B = (np.arange(16 * 16).reshape(16, 16) % 13 - 6).astype(np.int8)
 
 C = rns.g4_matmul(A, B)
 
 assert C.dtype == np.int32
 ```
 
-`g4_matmul()` accepts signed-INT8 integer matrices on the certified Series 1 shapes and returns exact signed-INT32 output.
+`g4_matmul()` accepts signed-INT8 integer matrices on the certified Series 1 shapes and returns the exact signed-INT32 result.
 
-Exact shared-scale rationals use the same API:
+A `SharedScaleMatrix` represents one integer numerator matrix divided by one positive integer scale:
 
 ```python
 left = rns.SharedScaleMatrix(A, scale=3)
@@ -58,16 +87,6 @@ C = rns.g4_matmul(left, right)
 print(C.numerators)
 print(C.scale)
 ```
-
-Current Series 1 fast-path contract:
-
-- hardware: **NVIDIA Tesla T4 / compute capability 7.5**;
-- shapes: the frozen **1,024 Series 1 `(M,N,K)` shapes**;
-- integer inputs: signed INT8 matrices;
-- integer output: exact signed INT32 matrix;
-- rational inputs: `SharedScaleMatrix` with signed-INT8 numerators and positive integer shared scales;
-- rational output: exact `SharedScaleMatrix`;
-- unsupported shapes or representations **fail closed** — no silent floating-point fallback.
 
 The reusable caller-supplied execution path was physically certified on **1,024 / 1,024 supported shapes** with full-range signed-INT8 data. Additional extreme-value and sparse-extreme tests also passed.
 
@@ -87,7 +106,7 @@ rns.g4_results("integer")
 rns.g4_results("rational")
 ```
 
-`g4_results()` prints the full frozen scorecard, including aggregate integer performance, win-side magnitude, integer loss-side magnitude, and the rational win/NVIDIA-win/tie/error breakdown.
+`g4_results()` prints the frozen scorecards, including aggregate integer performance, integer loss-side magnitude, and the rational win/loss/tie/error breakdown.
 
 On a Tesla T4 there are three benchmark entry points:
 
@@ -112,13 +131,13 @@ full     1,024 shapes
 
 `g4_benchmark()` is only a convenience runner. It runs **G4 INTEGERS first and G4 RATIONALS second**, but it does **not** combine them into one win percentage.
 
-The public runners report exactness, speed wins/losses/ties, XOPS/G4OPS, reproducibility, runtime/source provenance hashes, all-result-row hashes, and cryptographic run receipts.
+The benchmark paths are **replay-only**: they rerun the frozen Series 1 implementations. They do not run a new G4 search.
 
-The benchmark paths are replay-only: they rerun frozen Series 1 implementations rather than performing a new G4 search.
+The public runners report exactness, speed classifications, XOPS/G4OPS, runtime/source provenance hashes, result-row hashes, and cryptographic run receipts.
 
-### Certification and timing evidence
+### How speed certification works
 
-The public replay uses paired physical timings on the same T4, exactness gates, and cryptographic run receipts.
+The public replay first checks correctness, then uses repeated paired timings on the same T4 to classify speed.
 
 For the current integer public replay, winner classification uses **31 paired timing blocks per shape**, **20,000 bootstrap resamples**, a **95% confidence interval**, a **1.002 promotion threshold**, and at least **20 / 31 winning blocks**. Runtime or exactness failures fail closed.
 
@@ -126,7 +145,7 @@ The historical frozen integer archive predates that uniform public replay rule a
 
 Every certified rational winner used **31 paired timing blocks** and passed the non-integer-input, signed-range, and FP16-value-set proof gates.
 
-See [`G4_SERIES1_EVIDENCE.md`](G4_SERIES1_EVIDENCE.md) for the benchmark protocol, claim boundaries, and replay provenance.
+See [`G4_SERIES1_EVIDENCE.md`](G4_SERIES1_EVIDENCE.md) for the detailed benchmark protocol, claim boundaries, and replay provenance.
 
 ---
 
@@ -136,13 +155,13 @@ See [`G4_SERIES1_EVIDENCE.md`](G4_SERIES1_EVIDENCE.md) for the benchmark protoco
 **XOPS** — exact arithmetic operations per second.  
 **G4OPS** — XOPS delivered by a G4 implementation.
 
-For GEMM, XOPS intentionally uses the same conventional operation count as FLOPS:
+For GEMM, XOPS uses the same conventional arithmetic count as FLOPS:
 
 ```text
 XOP count = 2 × M × N × K
 ```
 
-That keeps exact and floating-point throughput directly comparable.
+That puts exact and floating-point work on the same **operation-count scale**. The correctness and representation semantics are still different.
 
 The eligibility rule is strict:
 
@@ -151,17 +170,19 @@ exactness PASS -> operations may count toward XOPS
 exactness FAIL -> 0 XOPS credit
 ```
 
-Every public benchmark prints this key before reporting XOPS/G4OPS so saved output remains self-explaining.
-
 For rational GEMM, headline G4OPS uses the **end-to-end exact-result timing boundary**, including the rational metadata/bookkeeping required to produce the exact rational result. Only the conventional `2*M*N*K` GEMM operations receive XOP credit.
 
 ---
 
 ## What is G4?
 
-G4 is the privately developed autonomous optimization/research system that discovered the benchmarked implementations.
+G4 is **not a GPU-specific system**. GPU arithmetic is simply the problem Series 1 applies it to.
 
-`rns_engine` exposes the frozen evidence, reproducible replay paths, the certified Series 1 execution library, and lower-level exact arithmetic tools used by the project.
+More generally, G4 works over a declared solution space and a declared success test. It can search candidate constructions, learn from measured outcomes, choose what to explore next, preserve useful experience, reject failures, and promote or create new strategies when the active problem grammar permits it.
+
+In Series 1, the feedback happens to be unusually objective: an implementation must return the exact mathematical result, and then the hardware determines how fast it is.
+
+`rns_engine` exposes the frozen Series 1 evidence, reproducible replay paths, the certified execution library, and lower-level exact-arithmetic tools used by this application. The private G4 search machinery is not required to replay the published result.
 
 ---
 
@@ -211,7 +232,7 @@ exact_integer_matmul
 exact_shared_scale_gemm
 ```
 
-These tools are supporting exact-arithmetic machinery. The main public G4 surface is:
+These tools are supporting exact-arithmetic machinery. The main public G4 Series 1 surface is:
 
 ```text
 g4_results
@@ -227,9 +248,9 @@ g4_matmul
 
 - **G4 Series 1 is frozen to Tesla T4 / compute capability 7.5.** Results on another GPU are a different experiment.
 - The benchmark catalog contains the declared **1,024 GEMM shapes**, not every possible matrix size.
-- The current G4 Series 1 user-math fast path accepts signed-INT8 integer matrices or shared-scale rational matrices with signed-INT8 numerators.
+- The Series 1 user-math fast path accepts signed-INT8 integer matrices or shared-scale rational matrices with signed-INT8 numerators.
 - Integer outputs are exact signed INT32 matrices under the certified Series 1 contract.
-- Shared-scale rational outputs are exact; Series 1 does not claim arbitrary per-element denominator support.
+- Shared-scale rational outputs are exact and use one positive integer scale per matrix; Series 1 does not claim arbitrary per-element denominator support.
 - Unsupported G4 shapes or representations fail closed rather than silently falling back to approximate floating point.
 - Integer and rational benchmark scores are always reported separately.
 - Future G4 generations are treated as separate Series rather than rewriting frozen Series 1 evidence.
@@ -243,12 +264,14 @@ The public Series 1 runtime and replay paths are integrity checked with SHA-256.
 Frozen headline scorecard:
 
 ```text
-G4 exact integers  vs NVIDIA FP16: 938 G4 wins / 86 NVIDIA wins / 0 ties / 0 errors
+G4 exact integers vs NVIDIA FP16 speed baseline:
+  938 G4 wins / 86 NVIDIA wins / 0 ties / 0 errors
   all 1024: 1.235x geomean | 1.257x median
   G4 wins: 1.311x geomean | 1.289x median | 2.647x best
   NVIDIA wins: G4 retains 64.60% throughput on geometric average
 
-G4 exact rationals vs NVIDIA FP16: 870 G4 wins / 110 NVIDIA wins / 41 ties / 3 errors
+G4 exact shared-scale rationals vs NVIDIA FP16 speed baseline:
+  870 G4 wins / 110 NVIDIA wins / 41 ties / 3 errors
   certified G4 wins: 1.417x geomean | 1.406x median | 2.978x best
   no all-1024 rational speedup aggregate is claimed by the frozen public summary
 ```
