@@ -116,7 +116,8 @@ from .pre_cuda import (
     run_pre_cuda_readiness,
 )
 from .g4_results import g4_results
-from .g4_trust import g4_benchmark
+from .g4_public import g4_benchmark, g4_integer_benchmark, g4_rational_benchmark
+from .g4_matmul import g4_matmul
 
 
 try:
@@ -164,7 +165,7 @@ __all__ = [
     "RailLearningLane", "ParallelRailPrior", "build_parallel_rail_prior",
     "PreCudaReadinessReport", "default_pre_cuda_matrices",
     "build_default_pre_cuda_fixture", "run_pre_cuda_readiness",
-    "g4_results", "g4_benchmark",
+    "g4_results", "g4_benchmark", "g4_integer_benchmark", "g4_rational_benchmark", "g4_matmul",
     "info",
 ]
 
@@ -180,4 +181,4 @@ def info():
     print("  Bridge APIs   : weighted signed INT32 accumulation with range receipts")
     print("  Planning APIs : local/global capacity + exact Mersenne rail-set search")
     print("  Pre-CUDA APIs : seven-rail oracle + exact shared-scale GEMM fixtures")
-    print("  G4 APIs       : frozen Series 1 evidence + Tesla T4 reproduction benchmark")
+    print("  G4 APIs       : combined/integer/rational T4 replay + certified exact g4_matmul")
