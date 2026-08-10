@@ -1,0 +1,72 @@
+name: Export G4S1 Shapes
+
+on:
+  push:
+    branches:
+      - agent/expose-g4s1-shapes
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Export frozen Series 1 shape manifest
+        shell: python
+        run: |
+          import base64
+          import csv
+          import hashlib
+          import io
+          import json
+          import lzma
+          from pathlib import Path
+          import tarfile
+
+          root = Path('.')
+          data = root / 'src' / 'rns_engine' / 'data'
+          meta = json.loads((data / 'g4s1_public_t4_runtime.json').read_text(encoding='utf-8'))
+
+          encoded = b''.join((data / name).read_bytes() for name in meta['payload_parts'])
+          xz_bytes = base64.b64decode(encoded, validate=False)
+          if hashlib.sha256(xz_bytes).hexdigest() != meta['xz_sha256']:
+              raise SystemExit('xz SHA-256 mismatch')
+
+          tar_bytes = lzma.decompress(xz_bytes)
+          if hashlib.sha256(tar_bytes).hexdigest() != meta['tar_sha256']:
+              raise SystemExit('tar SHA-256 mismatch')
+
+          member_name = meta['shape_manifest_member']
+          with tarfile.open(fileobj=io.BytesIO(tar_bytes), mode='r:') as archive:
+              handle = archive.extractfile(member_name)
+              if handle is None:
+                  raise SystemExit(f'missing {member_name}')
+              raw = handle.read()
+
+          expected = meta['members_sha256'][member_name]
+          actual = hashlib.sha256(raw).hexdigest()
+          if actual != expected:
+              raise SystemExit(f'shape manifest SHA-256 mismatch: {actual} != {expected}')
+
+          payload = json.loads(raw)
+          shapes = payload['shapes']
+          if len(shapes) != meta['supported_shapes']:
+              raise SystemExit(f'expected {meta["supported_shapes"]} shapes, got {len(shapes)}')
+
+          out = root / 'generated-shapes'
+          out.mkdir(exist_ok=True)
+          (out / 'shapes.json').write_bytes(raw)
+
+          with (out / 'shapes.csv').open('w', newline='', encoding='utf-8') as f:
+              writer = csv.writer(f)
+              writer.writerow(['shape_id', 'm', 'n', 'k'])
+              for row in shapes:
+                  writer.writerow([row.get('shape_id', ''), row['m'], row['n'], row['k']])
+
+          print(f'exported {len(shapes)} shapes')
+          print(f'manifest sha256={actual}')
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: g4s1-shapes
+          path: generated-shapes/
