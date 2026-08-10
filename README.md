@@ -34,6 +34,10 @@ The frozen scorecards are the answer to that question. Series 1 did **not** atte
 
 `g4_matmul()` is included so the certified computations can be called, checked, and replayed through a simple public API. Its one-shot CPU-NumPy wall time is **not** the quantity Series 1 was designed to optimize. A production-oriented execution layer would be a separate engineering task and a later release or Series, not part of the Series 1 claim.
 
+> [!WARNING]
+> **Timing boundary — read before comparing these numbers.**  
+> The frozen Series 1 speedups are **GPU-resident GEMM benchmark results**. They do **not** include Python API overhead or CPU↔GPU transfer time. The `g4_matmul()` convenience API is **not a production wall-time benchmark**. Compare Series 1 only against measurements using the same timing boundary.
+
 ## Series 1 at a glance
 
 | | Certified Series 1 contract |
