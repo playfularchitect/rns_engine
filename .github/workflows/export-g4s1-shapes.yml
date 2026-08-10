@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - agent/expose-g4s1-shapes
+  pull_request:
+    branches:
+      - main
 
 jobs:
   export:
