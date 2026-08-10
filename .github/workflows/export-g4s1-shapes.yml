@@ -8,11 +8,16 @@ on:
     branches:
       - main
 
+permissions:
+  contents: write
+
 jobs:
   export:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'push' && github.ref_name || github.head_ref }}
 
       - name: Export frozen Series 1 shape manifest
         shell: python
@@ -55,9 +60,11 @@ jobs:
           shapes = payload['shapes']
           if len(shapes) != meta['supported_shapes']:
               raise SystemExit(f'expected {meta["supported_shapes"]} shapes, got {len(shapes)}')
+          if len({(int(r['m']), int(r['n']), int(r['k'])) for r in shapes}) != len(shapes):
+              raise SystemExit('duplicate shape detected')
 
-          out = root / 'generated-shapes'
-          out.mkdir(exist_ok=True)
+          out = root / 'shapes' / 'G4s1'
+          out.mkdir(parents=True, exist_ok=True)
           (out / 'shapes.json').write_bytes(raw)
 
           with (out / 'shapes.csv').open('w', newline='', encoding='utf-8') as f:
@@ -66,10 +73,25 @@ jobs:
               for row in shapes:
                   writer.writerow([row.get('shape_id', ''), row['m'], row['n'], row['k']])
 
-          print(f'exported {len(shapes)} shapes')
+          print(f'exported {len(shapes)} unique shapes')
           print(f'manifest sha256={actual}')
+
+      - name: Commit verified catalog to branch
+        if: github.event_name == 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add shapes/G4s1/shapes.json shapes/G4s1/shapes.csv
+          if git diff --cached --quiet; then
+            echo "Catalog already current."
+          else
+            git commit -m "Add verified G4 Series 1 shape catalog"
+            git push origin HEAD:${{ github.ref_name }}
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
           name: g4s1-shapes
-          path: generated-shapes/
+          path: |
+            shapes/G4s1/shapes.json
+            shapes/G4s1/shapes.csv
