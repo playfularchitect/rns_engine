@@ -10,11 +10,17 @@ The current development goal is broader than Series 1: extend exact integer and 
 
 That is the project direction, **not a claim that Series 1 already covers FP64-class arithmetic or every NVIDIA baseline**. Series 1 is the first frozen milestone toward that larger goal.
 
-## Where G4 fits
+`rns_engine` is being built using **privately developed autonomous software called G4**. G4 is the system used to search for, test, learn from, and improve the implementations that become part of `rns_engine`.
 
-G4 is **not `rns_engine`**. G4 is the general autonomous search and optimization system being used to build and improve `rns_engine`.
+## What is G4?
 
-Give G4 a problem, a legal space of possible solutions, and a way to measure or certify success. G4 explores that space, learns from the results, decides what to try next, can promote or create new strategies when the declared problem space permits it, and preserves the strongest verified solutions.
+G4 is a **general autonomous search and optimization system**. It is not `rns_engine`, and it is not inherently a GPU tool.
+
+Give G4 a problem, a legal space of possible solutions, and a way to measure or certify success. G4 explores that space, learns from the results, decides what to try next, can promote or create new strategies when the declared problem space permits it, rejects failures, and preserves the strongest verified solutions.
+
+## How G4 is being used to build `rns_engine`
+
+For `rns_engine`, G4 is currently being applied to exact GPU arithmetic: searching for implementations that return the exact mathematical result while running as fast as possible on real hardware.
 
 **G4 Series 1 applies G4 to one `rns_engine` problem: exact GPU matrix multiplication on NVIDIA Tesla T4.** Series 1 is a frozen application of G4 and a frozen milestone in `rns_engine`; it is not a definition of either project's eventual scope.
 
@@ -214,15 +220,11 @@ For rational GEMM, headline G4OPS uses the **end-to-end exact-result timing boun
 
 ---
 
-## How G4 works
+## G4 in this repository
 
-G4 is **not `rns_engine` and is not GPU-specific**. It is the general search and optimization system being used to develop `rns_engine`; GPU arithmetic is simply the problem Series 1 applies it to.
+G4 itself is private. This repository publishes the `rns_engine` artifacts produced by the relevant G4 work: frozen Series 1 evidence, reproducible replay paths, the certified execution library, and lower-level exact-arithmetic tools.
 
-More generally, G4 works over a declared solution space and a declared success test. It can search candidate constructions, learn from measured outcomes, choose what to explore next, preserve useful experience, reject failures, and promote or create new strategies when the declared problem space permits it.
-
-In Series 1, the feedback happens to be unusually objective: an implementation must return the exact mathematical result, and then the hardware determines how fast it is.
-
-`rns_engine` exposes the frozen Series 1 evidence, reproducible replay paths, the certified execution library, and lower-level exact-arithmetic tools used by this application. The private G4 search machinery is not required to replay the published result.
+The private G4 search/learning machinery is not required to replay the published Series 1 result.
 
 ---
 
