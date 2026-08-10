@@ -45,7 +45,7 @@ The frozen scorecards are the answer to that question. Series 1 did **not** atte
 | **Integer math** | signed INT8 matrices -> exact signed INT32 result |
 | **Shared-scale rational math** | signed INT8 numerator matrix + one positive integer scale per matrix -> exact shared-scale result |
 | **GPU** | NVIDIA Tesla T4 / compute capability 7.5 |
-| **Shapes** | frozen set of 1,024 `(M,N,K)` GEMM shapes |
+| **Shapes** | frozen set of [1,024 supported `(M,N,K)` GEMM shapes](shapes/G4s1/) |
 | **Unsupported input** | fails closed; no silent floating-point fallback |
 
 A shared-scale rational matrix has **one common scale/denominator for the whole matrix**. Scales are positive Python integers, the output scale is their exact product, and optional `reduce=True` normalization is explicit rather than automatic. Series 1 does not claim arbitrary per-element rational denominators.
@@ -294,7 +294,7 @@ g4_matmul
 
 - **G4 Series 1 is a research/certification release, not a production deployment release or drop-in framework replacement.**
 - **G4 Series 1 is frozen to Tesla T4 / compute capability 7.5.** Results on another GPU are a different experiment.
-- The benchmark catalog contains the declared **1,024 GEMM shapes**, not every possible matrix size.
+- The benchmark catalog contains the declared **[1,024 GEMM shapes](shapes/G4s1/)**, not every possible matrix size.
 - The Series 1 user-math fast path accepts signed-INT8 integer matrices or shared-scale rational matrices with signed-INT8 numerators.
 - Integer outputs are exact signed INT32 matrices under the certified Series 1 contract.
 - Shared-scale rational outputs are exact and use one positive Python-integer scale per matrix; output scale is the exact product of the inputs, with optional explicit reduction.
