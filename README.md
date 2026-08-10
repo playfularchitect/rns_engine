@@ -1,10 +1,22 @@
 # rns_engine
 
-**Exact arithmetic, built to compete with floating-point speed.**
+**An exact math library being built to compete with floating-point speed.**
 
-G4 is a **general autonomous search and optimization system**. Give it a problem, a legal space of possible solutions, and a way to measure or certify success. G4 explores that space, learns from the results, decides what to try next, can promote or create new strategies when the declared problem space permits it, and preserves the strongest verified solutions.
+## What is `rns_engine`?
 
-**G4 Series 1 applies that system to one problem: exact GPU matrix multiplication on NVIDIA Tesla T4.** Series 1 is a frozen application of G4, not a definition of what G4 can work on.
+`rns_engine` is an **exact arithmetic library under active development**. The project is building practical integer and rational computation that treats mathematical exactness as a hard requirement instead of accepting floating-point rounding error.
+
+The current development goal is broader than Series 1: extend exact integer and rational GPU arithmetic through **FP16-, FP32-, and FP64-class dynamic ranges**, while making exact GEMM fast enough to compete with — and where possible beat — NVIDIA's corresponding high-performance GEMM paths.
+
+That is the project direction, **not a claim that Series 1 already covers FP64-class arithmetic or every NVIDIA baseline**. Series 1 is the first frozen milestone toward that larger goal.
+
+## Where G4 fits
+
+G4 is **not `rns_engine`**. G4 is the general autonomous search and optimization system being used to build and improve `rns_engine`.
+
+Give G4 a problem, a legal space of possible solutions, and a way to measure or certify success. G4 explores that space, learns from the results, decides what to try next, can promote or create new strategies when the declared problem space permits it, and preserves the strongest verified solutions.
+
+**G4 Series 1 applies G4 to one `rns_engine` problem: exact GPU matrix multiplication on NVIDIA Tesla T4.** Series 1 is a frozen application of G4 and a frozen milestone in `rns_engine`; it is not a definition of either project's eventual scope.
 
 For speed, Series 1 compares its exact GEMM implementations against NVIDIA's optimized cuBLASLt FP16-input GEMM. **FP16 is the fast floating-point speed baseline; G4 is exactness-gated separately.** The benchmark asks whether exact arithmetic can compete with floating-point-class speed, not whether FP16 provides the same correctness guarantee.
 
@@ -71,7 +83,9 @@ The G4 Series 1 GPU path currently requires Linux, an NVIDIA Tesla T4, and `nvcc
 
 ---
 
-## Use G4 Series 1
+## Use `rns_engine`
+
+The current public fast GEMM path exposes the frozen implementations produced and certified during G4 Series 1.
 
 ```python
 import numpy as np
@@ -200,9 +214,9 @@ For rational GEMM, headline G4OPS uses the **end-to-end exact-result timing boun
 
 ---
 
-## What is G4?
+## How G4 works
 
-G4 is **not a GPU-specific system**. GPU arithmetic is simply the problem Series 1 applies it to.
+G4 is **not `rns_engine` and is not GPU-specific**. It is the general search and optimization system being used to develop `rns_engine`; GPU arithmetic is simply the problem Series 1 applies it to.
 
 More generally, G4 works over a declared solution space and a declared success test. It can search candidate constructions, learn from measured outcomes, choose what to explore next, preserve useful experience, reject failures, and promote or create new strategies when the declared problem space permits it.
 
@@ -258,7 +272,7 @@ exact_integer_matmul
 exact_shared_scale_gemm
 ```
 
-These tools are supporting exact-arithmetic machinery. The main public G4 Series 1 surface is:
+These tools are supporting exact-arithmetic machinery. The main public Series 1 surface currently exposed through `rns_engine` is:
 
 ```text
 g4_results
