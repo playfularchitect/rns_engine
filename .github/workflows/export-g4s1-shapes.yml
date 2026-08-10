@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event_name == 'push' && github.ref_name || github.head_ref }}
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
 
       - name: Export frozen Series 1 shape manifest
         shell: python
@@ -77,7 +77,6 @@ jobs:
           print(f'manifest sha256={actual}')
 
       - name: Commit verified catalog to branch
-        if: github.event_name == 'push'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -86,7 +85,8 @@ jobs:
             echo "Catalog already current."
           else
             git commit -m "Add verified G4 Series 1 shape catalog"
-            git push origin HEAD:${{ github.ref_name }}
+            TARGET_BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+            git push origin HEAD:"$TARGET_BRANCH"
           fi
 
       - uses: actions/upload-artifact@v4
