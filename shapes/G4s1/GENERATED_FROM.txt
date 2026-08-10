@@ -1,0 +1,3 @@
+Source runtime member: g4s1_matmul_shapes.json
+Certified SHA-256: ac612da046601fa0f2a6e23f3ddcf58d5d91699cef3a9263a5a00118ccbb2873
+Expected shapes: 1024
