@@ -12,7 +12,7 @@ When released, the public Series 2 record will be organized under:
 - [`benchmark/`](benchmark/) — benchmark documentation and reproducibility material.
 - [`replay/`](replay/) — public replay and runtime information.
 - [`manifests/`](manifests/) — frozen public manifests and certification records.
-- [`FROZEN_RELEASE.md`](FROZEN_RELEASE.md) — release identity and preservation metadata.
+- [`release/`](release/) — release identity and preservation metadata.
 
 Once released, Series 2 will become a frozen public record in the same manner as Series 1.
 
